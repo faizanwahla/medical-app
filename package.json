@@ -1,0 +1,16 @@
+{
+  "name": "medical-app",
+  "version": "1.0.0",
+  "description": "Comprehensive Medical Patient Management System",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm -r run dev",
+    "build": "pnpm -r run build",
+    "test": "pnpm -r run test",
+    "lint": "pnpm -r run lint",
+    "type-check": "pnpm -r run type-check"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
