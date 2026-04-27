@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { prisma } from "../../lib/prisma";
+import { prisma } from "../../index";
 import { RegisterSchema, LoginSchema } from "@medical-app/shared";
 import {
   hashPassword,
@@ -8,7 +8,7 @@ import {
   generateRefreshToken,
 } from "../../lib/auth";
 import { handleError, ConflictError, ValidationError, UnauthorizedError } from "../../lib/errors";
-import { AuthRequest } from "../../middleware/auth";
+import { AuthRequest, authMiddleware } from "../../middleware/auth";
 
 const router = Router();
 
@@ -101,7 +101,7 @@ router.post("/login", async (req: AuthRequest, res: Response) => {
 });
 
 // Get current user
-router.get("/me", async (req: AuthRequest, res: Response) => {
+router.get("/me", authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
       throw new UnauthorizedError();
