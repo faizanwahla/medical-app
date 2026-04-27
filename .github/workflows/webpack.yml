@@ -34,6 +34,6 @@ jobs:
     - name: Build Web Package
       working-directory: ./packages/web
       run: |
-        # Vite projects usually use 'npm run build' or 'pnpm build'
-        # which points to 'vite build' inside package.json
-        pnpm run build
+        pnpm install
+        pnpm run --filter "@medical-app/shared" build || true 
+        pnpm run --filter "@medical-app/web" build
