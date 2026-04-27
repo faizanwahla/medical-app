@@ -13,6 +13,7 @@ import investigationRoutes from "./modules/investigations/routes";
 import treatmentRoutes from "./modules/treatments/routes";
 import medicineRoutes from "./modules/medicines/routes";
 import diagnosisRoutes from "./modules/diagnosis/routes";
+import reportsRoutes from "./modules/reports/routes";
 
 // Load environment variables
 dotenv.config();
@@ -66,6 +67,7 @@ app.use("/api/investigations", investigationRoutes);
 app.use("/api/treatments", treatmentRoutes);
 app.use("/api/medicines", medicineRoutes);
 app.use("/api/diagnosis", diagnosisRoutes);
+app.use("/api/reports", reportsRoutes);
 
 // Error handling middleware
 app.use(
@@ -92,6 +94,17 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🏥 Medical App Server running on port ${PORT}`);
+});
+
+// Handle uncaught exceptions
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught Exception:", error);
+  process.exit(1);
+});
+
+// Handle unhandled promise rejections
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
 });
 
 // Graceful shutdown

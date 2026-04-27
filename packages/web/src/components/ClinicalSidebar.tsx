@@ -1,4 +1,4 @@
-import { useUIStore } from "../lib/store";
+import { useUIStore, useAuthStore } from "../lib/store";
 import { 
   Users, 
   Calendar, 
@@ -19,14 +19,15 @@ interface SidebarProps {
 
 export default function Sidebar({ currentPage, onNavigate, onLogout }: SidebarProps) {
   const { sidebarOpen, toggleSidebar } = useUIStore();
+  const { user } = useAuthStore();
 
   const menuItems = [
     { id: "patients", label: "Patients", icon: Users },
     { id: "appointments", label: "Appointments", icon: Calendar },
     { id: "library", label: "Library", icon: BookOpen },
-    { id: "reports", label: "Reports", icon: BarChart2 },
+    { id: "reports", label: "Reports", icon: BarChart2, roles: ["ADMIN", "PHYSICIAN"] },
     { id: "settings", label: "Settings", icon: Settings },
-  ];
+  ].filter(item => !item.roles || item.roles.includes(user?.role || "PHYSICIAN"));
 
   return (
     <div

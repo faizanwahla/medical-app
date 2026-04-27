@@ -27,6 +27,7 @@ export const RegisterSchema = z.object({
     "ENT",
     "Ophthalmology",
   ]),
+  role: z.enum(["ADMIN", "PHYSICIAN", "NURSE", "RECEPTIONIST"]).optional().default("PHYSICIAN"),
 });
 
 // Patient Schemas
@@ -95,6 +96,13 @@ export const TreatmentCreateSchema = z.object({
   startedAt: z.date().optional(),
 });
 
+// Note Schemas
+export const ClinicalNoteCreateSchema = z.object({
+  title: z.string().min(1),
+  content: z.string().min(1),
+  tags: z.array(z.string()).optional(),
+});
+
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type RegisterInput = z.infer<typeof RegisterSchema>;
 export type PatientCreateInput = z.infer<typeof PatientCreateSchema>;
@@ -102,3 +110,4 @@ export type PatientUpdateInput = z.infer<typeof PatientUpdateSchema>;
 export type VitalCreateInput = z.infer<typeof VitalCreateSchema>;
 export type InvestigationCreateInput = z.infer<typeof InvestigationCreateSchema>;
 export type TreatmentCreateInput = z.infer<typeof TreatmentCreateSchema>;
+export type ClinicalNoteCreateInput = z.infer<typeof ClinicalNoteCreateSchema>;

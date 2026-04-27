@@ -3,6 +3,7 @@ export interface User {
   id: string;
   email: string;
   specialty: string;
+  role: "ADMIN" | "PHYSICIAN" | "NURSE" | "RECEPTIONIST";
   createdAt: Date;
   updatedAt: Date;
 }
@@ -129,6 +130,23 @@ export interface Treatment {
   status: "Active" | "Completed" | "Discontinued";
   startedAt: Date;
   endedAt?: Date;
+}
+
+// Note types
+export interface ClinicalNote {
+  id: string;
+  patientId: string;
+  title: string;
+  content: string;
+  tags: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ClinicalNoteCreateInput {
+  title: string;
+  content: string;
+  tags?: string[];
 }
 
 // API Response types

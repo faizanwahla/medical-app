@@ -44,49 +44,59 @@ export async function generateDifferentialDiagnosis(
       ).length;
       score += matchedSigns * 25;
 
-      // Age compatibility (simplified)
-      // In production, implement more sophisticated age range checking
-      score += 10;
+      // Specialty alignment bonus
+      if (disease.specialty.toLowerCase() === specialty.toLowerCase()) {
+        score += 20;
+      }
 
-      // Risk factor bonus
-      const matchedRiskFactors = riskFactors.filter((rf) =>
-        disease.epidemiology.toLowerCase().includes(rf.toLowerCase())
-      ).length;
-      score += matchedRiskFactors * 15;
+      // Pathophysiology & Epidemiology Keyword Matching
+      const clinicalContext = [...symptoms, ...signs, ...riskFactors];
+      let contextMatches = 0;
+      clinicalContext.forEach(term => {
+        if (disease.pathophysiology.toLowerCase().includes(term.toLowerCase())) contextMatches++;
+        if (disease.epidemiology.toLowerCase().includes(term.toLowerCase())) contextMatches++;
+      });
+      score += contextMatches * 10;
+
+      // Age compatibility (simplified)
+      score += 10;
 
       return {
         disease,
         score,
         matchedSymptoms,
         matchedSigns,
+        contextMatches
       };
     })
-    .filter((d) => d.score > 0)
+    .filter((d) => d.score > 20) // Minimum threshold
     .sort((a, b) => b.score - a.score)
     .slice(0, 10);
 
   // Format results
   return scoredDiseases.map((item) => ({
     diagnosis: item.disease.name,
-    probability: Math.min(100, Math.round((item.score / 100) * 100)),
-    reasoning: generateReasoning(item),
+    probability: Math.min(98, Math.round((item.score / 150) * 100)), // Scaled for higher precision
+    reasoning: generateReasoning(item, specialty),
     investigations: item.disease.investigations,
     management: item.disease.management,
     reference: item.disease.reference,
   }));
 }
 
-function generateReasoning(item: any): string {
+function generateReasoning(item: any, userSpecialty: string): string {
   const parts = [];
-  if (item.matchedSymptoms > 0) {
-    parts.push(`${item.matchedSymptoms} symptom(s) match`);
+  if (item.matchedSymptoms > 0) parts.push(`${item.matchedSymptoms} key symptoms`);
+  if (item.matchedSigns > 0) parts.push(`${item.matchedSigns} clinical signs`);
+  if (item.contextMatches > 0) parts.push("pathophysiological alignment");
+  
+  let reasoning = `Analysis reveals ${parts.join(", ")} consistent with ${item.disease.name}. `;
+  
+  if (item.disease.specialty.toLowerCase() === userSpecialty.toLowerCase()) {
+    reasoning += `This matches your primary specialty context. `;
   }
-  if (item.matchedSigns > 0) {
-    parts.push(`${item.matchedSigns} sign(s) match`);
-  }
-  return parts.length > 0
-    ? `Based on clinical findings: ${parts.join(" and ")}.`
-    : "Consider this diagnosis based on overall clinical context.";
+
+  return reasoning + `Probability is based on weighted clinical evidence matching.`;
 }
 
 /**

@@ -9,6 +9,7 @@ import {
 } from "../../lib/auth";
 import { handleError, ConflictError, ValidationError, UnauthorizedError } from "../../lib/errors";
 import { AuthRequest, authMiddleware } from "../../middleware/auth";
+import { createAuditLog } from "../../lib/audit";
 
 const router = Router();
 
@@ -35,12 +36,23 @@ router.post("/register", async (req: AuthRequest, res: Response) => {
         email: input.email,
         password: hashedPassword,
         specialty: input.specialty,
+        role: input.role as any,
       },
     });
 
+    // Audit log
+    await createAuditLog(
+      user.id,
+      "USER_REGISTER",
+      "USER",
+      user.id,
+      `User registered with role ${user.role}`,
+      req.ip
+    );
+
     // Generate tokens
-    const accessToken = generateAccessToken(user.id, user.email, user.specialty);
-    const refreshToken = generateRefreshToken(user.id, user.email, user.specialty);
+    const accessToken = generateAccessToken(user.id, user.email, user.role, user.specialty);
+    const refreshToken = generateRefreshToken(user.id, user.email, user.role, user.specialty);
 
     res.status(201).json({
       success: true,
@@ -51,6 +63,7 @@ router.post("/register", async (req: AuthRequest, res: Response) => {
           id: user.id,
           email: user.email,
           specialty: user.specialty,
+          role: user.role,
         },
       },
     });
@@ -79,9 +92,19 @@ router.post("/login", async (req: AuthRequest, res: Response) => {
       throw new UnauthorizedError("Invalid email or password");
     }
 
+    // Audit log
+    await createAuditLog(
+      user.id,
+      "USER_LOGIN",
+      "USER",
+      user.id,
+      "User logged in",
+      req.ip
+    );
+
     // Generate tokens
-    const accessToken = generateAccessToken(user.id, user.email, user.specialty);
-    const refreshToken = generateRefreshToken(user.id, user.email, user.specialty);
+    const accessToken = generateAccessToken(user.id, user.email, user.role, user.specialty);
+    const refreshToken = generateRefreshToken(user.id, user.email, user.role, user.specialty);
 
     res.json({
       success: true,
@@ -92,6 +115,7 @@ router.post("/login", async (req: AuthRequest, res: Response) => {
           id: user.id,
           email: user.email,
           specialty: user.specialty,
+          role: user.role,
         },
       },
     });
@@ -121,6 +145,7 @@ router.get("/me", authMiddleware, async (req: AuthRequest, res: Response) => {
         id: user.id,
         email: user.email,
         specialty: user.specialty,
+        role: user.role,
       },
     });
   } catch (error) {

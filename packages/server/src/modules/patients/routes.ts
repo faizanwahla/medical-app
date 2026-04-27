@@ -3,6 +3,7 @@ import { prisma } from "../../index";
 import { PatientCreateSchema, PatientUpdateSchema } from "@medical-app/shared";
 import { authMiddleware, AuthRequest } from "../../middleware/auth";
 import { handleError, NotFoundError, ValidationError } from "../../lib/errors";
+import { createAuditLog } from "../../lib/audit";
 
 const router = Router();
 
@@ -66,6 +67,16 @@ router.get("/:id", async (req: AuthRequest, res: Response) => {
       throw new NotFoundError("Patient");
     }
 
+    // Audit log
+    await createAuditLog(
+      req.user.userId,
+      "PATIENT_VIEW",
+      "PATIENT",
+      patient.id,
+      `Viewed patient ${patient.firstName} ${patient.lastName}`,
+      req.ip
+    );
+
     res.json({ success: true, data: patient });
   } catch (error) {
     handleError(error, res);
@@ -79,14 +90,22 @@ router.post("/", async (req: AuthRequest, res: Response) => {
 
     const { specialty, ...patientData } = PatientCreateSchema.parse(req.body);
 
-
-
     const patient = await prisma.patient.create({
       data: {
         ...patientData,
         userId: req.user.userId,
       },
     });
+
+    // Audit log
+    await createAuditLog(
+      req.user.userId,
+      "PATIENT_CREATE",
+      "PATIENT",
+      patient.id,
+      `Created patient ${patient.firstName} ${patient.lastName}`,
+      req.ip
+    );
 
     res.status(201).json({ success: true, data: patient });
   } catch (error) {
@@ -115,6 +134,16 @@ router.put("/:id", async (req: AuthRequest, res: Response) => {
       data: input,
     });
 
+    // Audit log
+    await createAuditLog(
+      req.user.userId,
+      "PATIENT_UPDATE",
+      "PATIENT",
+      updated.id,
+      `Updated patient ${updated.firstName} ${updated.lastName}`,
+      req.ip
+    );
+
     res.json({ success: true, data: updated });
   } catch (error) {
     handleError(error, res);
@@ -138,6 +167,16 @@ router.delete("/:id", async (req: AuthRequest, res: Response) => {
     await prisma.patient.delete({
       where: { id: req.params.id },
     });
+
+    // Audit log
+    await createAuditLog(
+      req.user.userId,
+      "PATIENT_DELETE",
+      "PATIENT",
+      req.params.id,
+      `Deleted patient ${patient.firstName} ${patient.lastName}`,
+      req.ip
+    );
 
     res.json({ success: true, message: "Patient deleted" });
   } catch (error) {
