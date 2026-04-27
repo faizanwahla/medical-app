@@ -25,27 +25,39 @@ function App() {
   useEffect(() => {
     const initializeAuth = async () => {
       const token = localStorage.getItem("accessToken");
+      const refreshToken = localStorage.getItem("refreshToken");
       
-      if (!token) {
+      if (!token && !refreshToken) {
         setLoading(false);
         return;
       }
 
       try {
         setLoading(true);
-        apiClient.setAccessToken(token);
+        if (token) {
+          apiClient.setAccessToken(token);
+        } else {
+          const refreshedToken = await apiClient.refreshSession();
+
+          if (!refreshedToken) {
+            setAuthenticated(false);
+            setLoading(false);
+            return;
+          }
+        }
+
         const response = await apiClient.getCurrentUser();
         
         if (response.success && response.data) {
           setUser(response.data);
           setAuthenticated(true);
         } else {
-          localStorage.removeItem("accessToken");
+          apiClient.clearTokens();
           setAuthenticated(false);
         }
       } catch (error) {
         console.error("Auth initialization failed:", error);
-        localStorage.removeItem("accessToken");
+        apiClient.clearTokens();
         setAuthenticated(false);
       } finally {
         setLoading(false);
@@ -73,10 +85,13 @@ function App() {
         {/* 2. AUTHENTICATION ROUTING 
             We now use the store's 'isAuthenticated' as the Single Source of Truth */}
         {isAuthenticated ? (
-          <DashboardLayout onLogout={() => {
-            localStorage.removeItem("accessToken");
-            window.location.href = "/"; // Force a clean state reset
-          }} />
+          <DashboardLayout
+            onLogout={() => {
+              void apiClient.logout().finally(() => {
+                window.location.href = "/"; // Force a clean state reset
+              });
+            }}
+          />
         ) : (
           <>
             {isRegistering ? (

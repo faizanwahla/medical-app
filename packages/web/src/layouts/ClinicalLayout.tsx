@@ -64,7 +64,7 @@ export default function DashboardLayout({ onLogout }: DashboardLayoutProps) {
       if (currentPage === "library") return <LibraryPage />;
       
       return <div className="p-10">Page {currentPage} not found</div>;
-    } catch (err) {
+    } catch {
       return <div className="p-10 text-red-600 font-bold">Error rendering {currentPage}</div>;
     }
   };

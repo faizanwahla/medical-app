@@ -26,17 +26,33 @@ export const prisma = new PrismaClient();
 
 // Create Express app
 const app = express();
+const DEFAULT_CORS_ORIGINS = ["http://localhost:3000", "http://localhost:3001"];
+const LOCAL_DEV_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
 
 // Middleware
 // Security headers
 app.use(helmet());
 
 // CORS - configure allowed origins from env
-const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || ["http://localhost:3000"];
-// Use the configured allowedOrigins instead of a wildcard to respect env-based policy
+const allowedOrigins =
+  process.env.CORS_ORIGIN?.split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean) || DEFAULT_CORS_ORIGINS;
+
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        (!process.env.CORS_ORIGIN && LOCAL_DEV_ORIGIN.test(origin))
+      ) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error("Origin not allowed by CORS"));
+    },
     credentials: true,
   })
 );
@@ -112,11 +128,24 @@ app.use((req, res) => {
   res.status(404).json({ success: false, error: "Route not found" });
 });
 
-// Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🏥 Medical App Server running on port ${PORT}`);
-});
+let server: ReturnType<typeof app.listen> | undefined;
+
+export const startServer = (port = Number(PORT)) => {
+  if (server) {
+    return server;
+  }
+
+  server = app.listen(port, () => {
+    console.log(`Medical App Server running on port ${port}`);
+  });
+
+  return server;
+};
+
+if (require.main === module) {
+  startServer();
+}
 
 // Handle uncaught exceptions
 process.on("uncaughtException", (error) => {
@@ -132,6 +161,15 @@ process.on("unhandledRejection", (reason, promise) => {
 // Graceful shutdown
 process.on("SIGTERM", async () => {
   console.log("SIGTERM received, shutting down gracefully...");
+
+  if (server) {
+    server.close(async () => {
+      await prisma.$disconnect();
+      process.exit(0);
+    });
+    return;
+  }
+
   await prisma.$disconnect();
   process.exit(0);
 });

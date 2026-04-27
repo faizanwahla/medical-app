@@ -77,11 +77,12 @@ router.put("/:id", async (req: AuthRequest, res: Response) => {
       throw new NotFoundError("Investigation");
     }
 
-    const { result, normalRange, interpretation, status } = req.body;
+    const { result, normalRange, interpretation, status, notes } = req.body;
 
     const updated = await prisma.investigation.update({
       where: { id: req.params.id },
       data: {
+        notes: notes !== undefined ? notes : investigation.notes,
         result: result || investigation.result,
         normalRange: normalRange || investigation.normalRange,
         interpretation: interpretation || investigation.interpretation,

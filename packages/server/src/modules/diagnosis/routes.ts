@@ -7,6 +7,7 @@ import {
   saveDifferentialDiagnoses,
   DDxRequest,
 } from "../../lib/diagnosis-engine";
+import { enrichDiseaseRecord } from "../../lib/disease-playbook";
 
 const router = Router();
 router.use(authMiddleware);
@@ -26,6 +27,10 @@ router.post("/generate/:patientId", async (req: AuthRequest, res: Response) => {
     }
 
     const { symptoms = [], signs = [], riskFactors = [] } = req.body;
+    const latestVital = await prisma.vital.findFirst({
+      where: { patientId: req.params.patientId },
+      orderBy: { recordedAt: "desc" },
+    });
 
     const request: DDxRequest = {
       symptoms,
@@ -33,6 +38,7 @@ router.post("/generate/:patientId", async (req: AuthRequest, res: Response) => {
       age: patient.age,
       specialty: req.user.specialty || "General Medicine",
       riskFactors,
+      latestVital,
     };
 
     // Generate suggestions
@@ -54,43 +60,23 @@ router.post("/generate/:patientId", async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Get saved DDx for a patient
-router.get("/:patientId", async (req: AuthRequest, res: Response) => {
+// Get all diseases (Library)
+router.get("/library", async (req: Request, res: Response) => {
   try {
-    if (!req.user) throw new Error("Not authenticated");
+    const [diseases, medicines] = await Promise.all([
+      prisma.disease.findMany({
+        orderBy: { name: "asc" },
+      }),
+      prisma.medicine.findMany(),
+    ]);
+    const medicinesByName = new Map(
+      medicines.map((medicine) => [medicine.name.trim().toLowerCase(), medicine])
+    );
 
-    // Get patient
-    const patient = await prisma.patient.findUnique({
-      where: { id: req.params.patientId },
+    res.json({
+      success: true,
+      data: diseases.map((disease) => enrichDiseaseRecord(disease, medicinesByName)),
     });
-
-    if (!patient || patient.userId !== req.user.userId) {
-      throw new NotFoundError("Patient");
-    }
-
-    const diagnoses = await prisma.differentialDiagnosis.findMany({
-      where: { patientId: req.params.patientId },
-      orderBy: { probability: "desc" },
-    });
-
-    res.json({ success: true, data: diagnoses });
-  } catch (error) {
-    handleError(error, res);
-  }
-});
-
-// Get disease details
-router.get("/disease/:id", async (req: Request, res: Response) => {
-  try {
-    const disease = await prisma.disease.findUnique({
-      where: { id: req.params.id },
-    });
-
-    if (!disease) {
-      throw new NotFoundError("Disease");
-    }
-
-    res.json({ success: true, data: disease });
   } catch (error) {
     handleError(error, res);
   }
@@ -118,24 +104,73 @@ router.get("/search/query", async (req: Request, res: Response) => {
       where.specialty = { contains: specialty, mode: "insensitive" };
     }
 
-    const diseases = await prisma.disease.findMany({
-      where,
-      take: 20,
-    });
+    const [diseases, medicines] = await Promise.all([
+      prisma.disease.findMany({
+        where,
+        take: 20,
+      }),
+      prisma.medicine.findMany(),
+    ]);
+    const medicinesByName = new Map(
+      medicines.map((medicine) => [medicine.name.trim().toLowerCase(), medicine])
+    );
 
-    res.json({ success: true, data: diseases });
+    res.json({
+      success: true,
+      data: diseases.map((disease) => enrichDiseaseRecord(disease, medicinesByName)),
+    });
   } catch (error) {
     handleError(error, res);
   }
 });
 
-// Get all diseases (Library)
-router.get("/library", async (req: Request, res: Response) => {
+// Get disease details
+router.get("/disease/:id", async (req: Request, res: Response) => {
   try {
-    const diseases = await prisma.disease.findMany({
-      orderBy: { name: "asc" },
+    const [disease, medicines] = await Promise.all([
+      prisma.disease.findUnique({
+        where: { id: req.params.id },
+      }),
+      prisma.medicine.findMany(),
+    ]);
+
+    if (!disease) {
+      throw new NotFoundError("Disease");
+    }
+
+    const medicinesByName = new Map(
+      medicines.map((medicine) => [medicine.name.trim().toLowerCase(), medicine])
+    );
+
+    res.json({
+      success: true,
+      data: enrichDiseaseRecord(disease, medicinesByName),
     });
-    res.json({ success: true, data: diseases });
+  } catch (error) {
+    handleError(error, res);
+  }
+});
+
+// Get saved DDx for a patient
+router.get("/:patientId", async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) throw new Error("Not authenticated");
+
+    // Get patient
+    const patient = await prisma.patient.findUnique({
+      where: { id: req.params.patientId },
+    });
+
+    if (!patient || patient.userId !== req.user.userId) {
+      throw new NotFoundError("Patient");
+    }
+
+    const diagnoses = await prisma.differentialDiagnosis.findMany({
+      where: { patientId: req.params.patientId },
+      orderBy: { probability: "desc" },
+    });
+
+    res.json({ success: true, data: diagnoses });
   } catch (error) {
     handleError(error, res);
   }

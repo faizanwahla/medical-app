@@ -6,13 +6,15 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   resolve: {
+    extensions: [".mjs", ".ts", ".tsx", ".js", ".jsx", ".json"],
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@medical-app/shared": path.resolve(__dirname, "../shared/src"),
     },
   },
   server: {
     port: 3001,
-    strictPort: true,
+    strictPort: false,
     proxy: {
       "/api": {
         target: "http://localhost:5000",

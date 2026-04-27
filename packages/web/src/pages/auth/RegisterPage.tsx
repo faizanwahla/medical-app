@@ -39,6 +39,7 @@ export default function RegisterPage({
     try {
       const response = await apiClient.register(email, password, specialty);
       if (response.success) {
+        apiClient.setSessionTokens(response.data.accessToken, response.data.refreshToken);
         setAccessToken(response.data.accessToken);
         setUser(response.data.user);
         onRegisterSuccess();

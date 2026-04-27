@@ -110,6 +110,7 @@ model Investigation {
   status         String
   requestedAt    DateTime  @default(now())
   resultAt       DateTime?
+  notes          String?
   result         String?
   normalRange    String?
   interpretation String?
@@ -170,6 +171,7 @@ model Disease {
   prognosis          String
   reference          String
   vitalSigns         Json?    // Expected vital sign ranges: {bp: {sys: "120-130", dia: "80-90"}, hr: "60-100", temp: "37-38", glucose: "90-120"}
+  clinicalPlaybook   Json?
   createdAt          DateTime @default(now())
 
   @@index([specialty])

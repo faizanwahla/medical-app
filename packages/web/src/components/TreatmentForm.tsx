@@ -33,6 +33,8 @@ export default function TreatmentForm({ patientId, onClose }: TreatmentFormProps
     },
   });
 
+  const medicines = medicineResults?.data?.medicines || [];
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMedicine || !dosage || !frequency) return;
@@ -75,9 +77,9 @@ export default function TreatmentForm({ patientId, onClose }: TreatmentFormProps
           </div>
         )}
 
-        {medicineResults?.success && medicineResults.data.length > 0 && !selectedMedicine && (
+        {medicineResults?.success && medicines.length > 0 && !selectedMedicine && (
           <div className="mt-2 border rounded-lg divide-y max-h-48 overflow-y-auto bg-white shadow-sm">
-            {medicineResults.data.map((med: Medicine) => (
+            {medicines.map((med: Medicine) => (
               <button
                 key={med.id}
                 onClick={() => {

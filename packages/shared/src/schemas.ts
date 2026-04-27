@@ -73,7 +73,7 @@ export const VitalCreateSchema = z.object({
   bloodPressureSystolic: z.number().int().min(60).max(220).optional(),
   bloodPressureDiastolic: z.number().int().min(40).max(140).optional(),
   oxygenSaturation: z.number().min(50).max(100).optional(),
-  recordedAt: z.date().optional(),
+  recordedAt: z.coerce.date().optional(),
   notes: z.string().optional(),
 });
 
@@ -81,6 +81,7 @@ export const VitalCreateSchema = z.object({
 export const InvestigationCreateSchema = z.object({
   name: z.string().min(1),
   type: z.enum(["Lab", "Imaging", "ECG", "Other"]),
+  notes: z.string().optional(),
   result: z.string().optional(),
   normalRange: z.string().optional(),
   interpretation: z.string().optional(),
@@ -93,7 +94,7 @@ export const TreatmentCreateSchema = z.object({
   frequency: z.string().min(1),
   duration: z.string().min(1),
   instructions: z.string().optional(),
-  startedAt: z.date().optional(),
+  startedAt: z.coerce.date().optional(),
 });
 
 // Note Schemas

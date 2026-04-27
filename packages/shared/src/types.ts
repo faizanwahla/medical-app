@@ -69,7 +69,61 @@ export interface Disease {
   management: string;
   prognosis: string;
   reference: string;
+  clinicalPlaybook?: DiseaseClinicalPlaybook;
   createdAt: Date;
+}
+
+export type VitalMetric =
+  | "temperature"
+  | "pulse"
+  | "respiratoryRate"
+  | "bloodPressureSystolic"
+  | "bloodPressureDiastolic"
+  | "oxygenSaturation"
+  | "bloodGlucose";
+
+export interface DiseaseVitalPattern {
+  metric: VitalMetric;
+  expected: string;
+  interpretation: string;
+  highAlert?: number;
+  lowAlert?: number;
+}
+
+export interface DiseaseInvestigationRecommendation {
+  name: string;
+  type: "Lab" | "Imaging" | "ECG" | "Other";
+  priority: "Urgent" | "Routine" | "Targeted";
+  reason: string;
+  expectedFindings?: string;
+}
+
+export interface DiseaseTreatmentRecommendation {
+  category: "First-line" | "Adjunct" | "Rescue" | "Long-term" | "Supportive";
+  medicineName: string;
+  medicineId?: string;
+  rationale: string;
+  dose: string;
+  frequency: string;
+  duration: string;
+  instructions?: string;
+  commonSideEffects: string[];
+  contraindications: string[];
+}
+
+export interface DiseaseClinicalPlaybook {
+  summary: string;
+  riskFactors: string[];
+  complications: string[];
+  redFlags: string[];
+  supportiveCare: string[];
+  monitoring: string[];
+  followUp: string[];
+  disposition: string[];
+  differentialClues: string[];
+  vitalPatterns: DiseaseVitalPattern[];
+  investigationPlan: DiseaseInvestigationRecommendation[];
+  treatmentPlan: DiseaseTreatmentRecommendation[];
 }
 
 export interface DifferentialDiagnosis {
@@ -101,6 +155,7 @@ export interface Investigation {
   requestedAt: Date;
   resultAt?: Date;
   result: string;
+  notes?: string;
   normalRange?: string;
   interpretation?: string;
   createdAt: Date;

@@ -1,5 +1,6 @@
+import { DDxSuggestion, Vital } from "@medical-app/shared";
 import { prisma } from "../index";
-import { DDxSuggestion } from "@medical-app/shared";
+import { parseClinicalPlaybook } from "./disease-playbook";
 
 export interface DDxRequest {
   symptoms: string[];
@@ -7,6 +8,17 @@ export interface DDxRequest {
   age: number;
   specialty: string;
   riskFactors?: string[];
+  latestVital?: Partial<
+    Pick<
+      Vital,
+      | "temperature"
+      | "pulse"
+      | "respiratoryRate"
+      | "bloodPressureSystolic"
+      | "bloodPressureDiastolic"
+      | "oxygenSaturation"
+    >
+  > | null;
 }
 
 /**
@@ -16,7 +28,7 @@ export interface DDxRequest {
 export async function generateDifferentialDiagnosis(
   request: DDxRequest
 ): Promise<DDxSuggestion[]> {
-  const { symptoms, signs, age, specialty, riskFactors = [] } = request;
+  const { symptoms, signs, age, specialty, riskFactors = [], latestVital } = request;
 
   if (!symptoms.length && !signs.length) {
     return [];
@@ -29,6 +41,7 @@ export async function generateDifferentialDiagnosis(
   const scoredDiseases = diseases
     .map((disease) => {
       let score = 0;
+      const playbook = parseClinicalPlaybook(disease.clinicalPlaybook);
 
       // Match symptoms
       const matchedSymptoms = symptoms.filter((symptom) =>
@@ -58,6 +71,35 @@ export async function generateDifferentialDiagnosis(
       });
       score += contextMatches * 10;
 
+      const matchedRiskFactors =
+        playbook?.riskFactors.filter((factor) =>
+          riskFactors.some((riskFactor) =>
+            factor.toLowerCase().includes(riskFactor.toLowerCase())
+          )
+        ).length || 0;
+      score += matchedRiskFactors * 12;
+
+      let vitalPatternMatches = 0;
+      if (playbook?.vitalPatterns && latestVital) {
+        vitalPatternMatches = playbook.vitalPatterns.filter((pattern) => {
+          const value = latestVital[pattern.metric];
+          if (typeof value !== "number") {
+            return false;
+          }
+
+          if (typeof pattern.highAlert === "number" && value >= pattern.highAlert) {
+            return true;
+          }
+
+          if (typeof pattern.lowAlert === "number" && value <= pattern.lowAlert) {
+            return true;
+          }
+
+          return false;
+        }).length;
+      }
+      score += vitalPatternMatches * 8;
+
       // Age compatibility (simplified)
       score += 10;
 
@@ -66,7 +108,9 @@ export async function generateDifferentialDiagnosis(
         score,
         matchedSymptoms,
         matchedSigns,
-        contextMatches
+        contextMatches,
+        matchedRiskFactors,
+        vitalPatternMatches,
       };
     })
     .filter((d) => d.score > 20) // Minimum threshold
@@ -78,7 +122,7 @@ export async function generateDifferentialDiagnosis(
     (symptoms.length * 30) + 
     (signs.length * 25) + 
     20 + // specialty bonus
-    ((symptoms.length + signs.length) * 10) + // context
+    ((symptoms.length + signs.length + riskFactors.length) * 10) + // context
     10; // age
 
   // Format results with calibrated probability
@@ -103,6 +147,8 @@ function generateReasoning(item: any, userSpecialty: string): string {
   if (item.matchedSymptoms > 0) parts.push(`${item.matchedSymptoms} key symptoms`);
   if (item.matchedSigns > 0) parts.push(`${item.matchedSigns} clinical signs`);
   if (item.contextMatches > 0) parts.push("pathophysiological alignment");
+  if (item.matchedRiskFactors > 0) parts.push(`${item.matchedRiskFactors} risk factor matches`);
+  if (item.vitalPatternMatches > 0) parts.push(`${item.vitalPatternMatches} vital sign correlations`);
   
   let reasoning = `Analysis reveals ${parts.join(", ")} consistent with ${item.disease.name}. `;
   

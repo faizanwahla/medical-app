@@ -1,19 +1,32 @@
-import axios, { AxiosInstance, AxiosError } from "axios";
+import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from "axios";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+const REFRESH_EXCLUDED_ROUTES = ["/auth/login", "/auth/register", "/auth/refresh"];
+
+interface RetryableRequestConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
 
 class ApiClient {
   private client: AxiosInstance;
+  private refreshClient: AxiosInstance;
   private accessToken: string | null = null;
+  private refreshToken: string | null = null;
+  private refreshPromise: Promise<string | null> | null = null;
 
   constructor() {
     this.client = axios.create({
       baseURL: API_BASE_URL,
       timeout: 30000,
     });
+    this.refreshClient = axios.create({
+      baseURL: API_BASE_URL,
+      timeout: 30000,
+    });
 
-    // Load token from localStorage
+    // Load tokens from localStorage
     this.accessToken = localStorage.getItem("accessToken");
+    this.refreshToken = localStorage.getItem("refreshToken");
 
     // Add request interceptor to include token
     this.client.interceptors.request.use((config) => {
@@ -26,34 +39,95 @@ class ApiClient {
     // Add response interceptor for error handling
     this.client.interceptors.response.use(
       (response) => response,
-      (error: AxiosError) => {
-        // Only redirect if it's a 401 AND we aren't already on the login page
-        if (error.response?.status === 401 && window.location.pathname !== "/") {
-          console.warn("Unauthorized request - clearing session");
-          localStorage.removeItem("accessToken");
-          
-          // Instead of window.location.href, we let the App state handle it
-          // or only redirect if absolutely necessary.
-          if (window.location.pathname !== "/login") {
-            window.location.href = "/"; 
+      async (error: AxiosError) => {
+        const originalRequest = error.config as RetryableRequestConfig | undefined;
+        const requestUrl = originalRequest?.url || "";
+        const canRefresh =
+          error.response?.status === 401 &&
+          !!originalRequest &&
+          !originalRequest._retry &&
+          !!this.refreshToken &&
+          !REFRESH_EXCLUDED_ROUTES.some((route) => requestUrl.startsWith(route));
+
+        if (canRefresh && originalRequest) {
+          originalRequest._retry = true;
+          const refreshedAccessToken = await this.refreshSession();
+
+          if (refreshedAccessToken) {
+            originalRequest.headers = originalRequest.headers || {};
+            originalRequest.headers.Authorization = `Bearer ${refreshedAccessToken}`;
+            return this.client(originalRequest);
           }
         }
+
+        if (error.response?.status === 401 && window.location.pathname !== "/") {
+          console.warn("Unauthorized request - clearing session");
+          this.clearTokens();
+          if (window.location.pathname !== "/login") {
+            window.location.href = "/";
+          }
+        }
+
         return Promise.reject(error);
       }
     );
   }
 
-  setAccessToken(token: string) {
-    this.accessToken = token;
-    localStorage.setItem("accessToken", token);
-    
-    // CRITICAL: This line tells axios to include the token in EVERY future request
-    this.client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  setSessionTokens(accessToken: string, refreshToken?: string | null) {
+    this.accessToken = accessToken;
+    localStorage.setItem("accessToken", accessToken);
+
+    if (typeof refreshToken === "string") {
+      this.refreshToken = refreshToken;
+      localStorage.setItem("refreshToken", refreshToken);
+    }
+
+    this.client.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
   }
 
-  clearToken() {
+  setAccessToken(token: string) {
+    this.setSessionTokens(token, this.refreshToken);
+  }
+
+  clearTokens() {
     this.accessToken = null;
+    this.refreshToken = null;
     localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    delete this.client.defaults.headers.common.Authorization;
+  }
+
+  async refreshSession() {
+    if (!this.refreshToken) {
+      return null;
+    }
+
+    if (!this.refreshPromise) {
+      this.refreshPromise = this.refreshClient
+        .post("/auth/refresh", {
+          refreshToken: this.refreshToken,
+        })
+        .then((response) => {
+          const refreshedAccessToken = response.data?.data?.accessToken as string | undefined;
+          const refreshedRefreshToken = response.data?.data?.refreshToken as string | undefined;
+
+          if (!refreshedAccessToken) {
+            throw new Error("Refresh endpoint did not return a new access token");
+          }
+
+          this.setSessionTokens(refreshedAccessToken, refreshedRefreshToken || this.refreshToken);
+          return refreshedAccessToken;
+        })
+        .catch(() => {
+          this.clearTokens();
+          return null;
+        })
+        .finally(() => {
+          this.refreshPromise = null;
+        });
+    }
+
+    return this.refreshPromise;
   }
 
   // Auth endpoints
@@ -77,6 +151,18 @@ class ApiClient {
   async getCurrentUser() {
     const response = await this.client.get("/auth/me");
     return response.data;
+  }
+
+  async logout() {
+    try {
+      if (this.refreshToken) {
+        await this.client.post("/auth/logout", {
+          refreshToken: this.refreshToken,
+        });
+      }
+    } finally {
+      this.clearTokens();
+    }
   }
 
   // Patient endpoints

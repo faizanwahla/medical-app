@@ -24,7 +24,9 @@
     /* Path mapping */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@medical-app/shared": ["../shared/src/index.ts"],
+      "@medical-app/shared/*": ["../shared/src/*"]
     },
     "jsx": "react-jsx"
   },

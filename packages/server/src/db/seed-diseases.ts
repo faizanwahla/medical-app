@@ -1,4 +1,5 @@
 import { prisma } from "../index";
+import { diseasePlaybooks } from "./disease-playbooks";
 
 const diseases = [
   // Respiratory diseases
@@ -16,7 +17,8 @@ const diseases = [
     management: "Antibiotics, oxygen support, hydration, supportive care",
     prognosis: "Good with early treatment, depends on causative organism",
     reference: "Harrison's Principles of Internal Medicine",
-    vitalSigns: { bp: { normal: "120/80" }, hr: { normal: "60-100", elevated: ">100" }, temp: { normal: "37", abnormal: ">38" }, rr: { normal: "12-20", elevated: ">20" }, o2: { normal: ">95", low: "<90" } }
+    vitalSigns: { bp: { normal: "120/80" }, hr: { normal: "60-100", elevated: ">100" }, temp: { normal: "37", abnormal: ">38" }, rr: { normal: "12-20", elevated: ">20" }, o2: { normal: ">95", low: "<90" } },
+    clinicalPlaybook: diseasePlaybooks["J18.9"],
   },
   {
     name: "Asthma",
@@ -32,7 +34,8 @@ const diseases = [
     management: "Beta-2 agonists, inhaled corticosteroids, avoid triggers",
     prognosis: "Good with proper management and trigger avoidance",
     reference: "GINA Guidelines",
-    vitalSigns: { bp: { normal: "120/80" }, hr: { normal: "60-100", elevated: ">100" }, rr: { normal: "12-20", elevated: ">20" }, o2: { normal: ">95", low: "<92" } }
+    vitalSigns: { bp: { normal: "120/80" }, hr: { normal: "60-100", elevated: ">100" }, rr: { normal: "12-20", elevated: ">20" }, o2: { normal: ">95", low: "<92" } },
+    clinicalPlaybook: diseasePlaybooks["J45.9"],
   },
   {
     name: "Myocardial Infarction",
@@ -48,7 +51,8 @@ const diseases = [
     management: "Antiplatelet therapy, revascularization, beta-blockers, ACE inhibitors",
     prognosis: "Depends on extent of infarction and time to treatment",
     reference: "ACC/AHA Guidelines",
-    vitalSigns: { bp: { normal: "120/80", low: "<90/60" }, hr: { normal: "60-100", elevated: ">100" }, temp: { normal: "37" } }
+    vitalSigns: { bp: { normal: "120/80", low: "<90/60" }, hr: { normal: "60-100", elevated: ">100" }, temp: { normal: "37" } },
+    clinicalPlaybook: diseasePlaybooks["I21.9"],
   },
   {
     name: "Type 2 Diabetes Mellitus",
@@ -64,7 +68,8 @@ const diseases = [
     management: "Lifestyle modification, metformin, other oral agents, insulin",
     prognosis: "Manageable with good glycemic control and lifestyle",
     reference: "ADA Standards of Care",
-    vitalSigns: { glucose: { normal: "90-120", elevated: ">200" } }
+    vitalSigns: { glucose: { normal: "90-120", elevated: ">200" } },
+    clinicalPlaybook: diseasePlaybooks["E11.9"],
   },
   {
     name: "Hypertension",
@@ -80,7 +85,8 @@ const diseases = [
     management: "Lifestyle modification, ACE inhibitors, ARBs, beta-blockers",
     prognosis: "Good with treatment, prevents complications",
     reference: "ACC/AHA Guidelines",
-    vitalSigns: { bp: { normal: "<120/80", elevated: "130-139/80-89", stage2: ">140/90" } }
+    vitalSigns: { bp: { normal: "<120/80", elevated: "130-139/80-89", stage2: ">140/90" } },
+    clinicalPlaybook: diseasePlaybooks["I10"],
   },
   {
     name: "Acute Gastroenteritis",
@@ -96,7 +102,8 @@ const diseases = [
     management: "Supportive care, fluid and electrolyte replacement, antiemetics",
     prognosis: "Excellent, usually self-limiting in 1-7 days",
     reference: "WHO Guidelines",
-    vitalSigns: { temp: { normal: "37", elevated: ">38" }, bp: { normal: "120/80" }, hr: { normal: "60-100", elevated: ">100" } }
+    vitalSigns: { temp: { normal: "37", elevated: ">38" }, bp: { normal: "120/80" }, hr: { normal: "60-100", elevated: ">100" } },
+    clinicalPlaybook: diseasePlaybooks["A09"],
   },
   {
     name: "Appendicitis",
@@ -112,7 +119,8 @@ const diseases = [
     management: "Appendectomy, antibiotics, fluid resuscitation",
     prognosis: "Good with surgery, mortality increases with perforation",
     reference: "Surgical Textbooks",
-    vitalSigns: { temp: { normal: "37", elevated: ">38" }, hr: { normal: "60-100", elevated: ">100" }, bp: { normal: "120/80" } }
+    vitalSigns: { temp: { normal: "37", elevated: ">38" }, hr: { normal: "60-100", elevated: ">100" }, bp: { normal: "120/80" } },
+    clinicalPlaybook: diseasePlaybooks["K37"],
   },
   {
     name: "Congestive Heart Failure",
@@ -128,7 +136,8 @@ const diseases = [
     management: "ACE inhibitors, beta-blockers, diuretics, salt restriction",
     prognosis: "Chronic condition, mortality depends on ejection fraction",
     reference: "ACC/AHA Guidelines",
-    vitalSigns: { bp: { normal: "120/80", low: "<90/60" }, hr: { normal: "60-100", elevated: ">100" } }
+    vitalSigns: { bp: { normal: "120/80", low: "<90/60" }, hr: { normal: "60-100", elevated: ">100" } },
+    clinicalPlaybook: diseasePlaybooks["I50.9"],
   },
   {
     name: "Urinary Tract Infection",
@@ -144,7 +153,8 @@ const diseases = [
     management: "Antibiotics (TMP-SMX, nitrofurantoin, fluoroquinolones)",
     prognosis: "Excellent with antibiotic treatment",
     reference: "Infectious Disease Guidelines",
-    vitalSigns: { temp: { normal: "37", elevated: ">37.5" } }
+    vitalSigns: { temp: { normal: "37", elevated: ">37.5" } },
+    clinicalPlaybook: diseasePlaybooks["N39.0"],
   },
   {
     name: "Sepsis",
@@ -160,7 +170,8 @@ const diseases = [
     management: "Antibiotics, fluid resuscitation, vasopressors, source control",
     prognosis: "High mortality even with treatment, depends on time to treatment",
     reference: "Surviving Sepsis Campaign",
-    vitalSigns: { temp: { high: ">38" }, hr: { elevated: ">90" }, rr: { elevated: ">20" }, bp: { low: "<90/60" } }
+    vitalSigns: { temp: { high: ">38" }, hr: { elevated: ">90" }, rr: { elevated: ">20" }, bp: { low: "<90/60" } },
+    clinicalPlaybook: diseasePlaybooks["A41.9"],
   },
   {
     name: "Pneumothorax",
@@ -176,7 +187,8 @@ const diseases = [
     management: "Observation for small PTX, chest tube for large or symptomatic",
     prognosis: "Good in primary PTX, higher recurrence risk in secondary",
     reference: "Respiratory Medicine Guidelines",
-    vitalSigns: { rr: { normal: "12-20", elevated: ">20" }, o2: { normal: ">95", low: "<90" }, hr: { elevated: ">100" } }
+    vitalSigns: { rr: { normal: "12-20", elevated: ">20" }, o2: { normal: ">95", low: "<90" }, hr: { elevated: ">100" } },
+    clinicalPlaybook: diseasePlaybooks["J93.9"],
   }
 ];
 

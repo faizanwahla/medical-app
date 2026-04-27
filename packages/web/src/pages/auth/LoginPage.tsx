@@ -26,21 +26,17 @@ export default function LoginPage({
       const response = await apiClient.login(email, password);
       
       if (response.success) {
-        // 1. Get the token (checking both common names)
         const token = response.data.accessToken || response.data.token;
         
         if (!token) {
           throw new Error("No token received from server");
         }
 
-        // 2. IMPORTANT: Update the API Client first so the next request works!
-        apiClient.setAccessToken(token);
+        apiClient.setSessionTokens(token, response.data.refreshToken);
 
-        // 3. Update the Zustand store
         setAccessToken(token);
         setUser(response.data.user);
 
-        // 4. Call callback with token
         onLoginSuccess(token);
       } else {
         setError(response.error || "Login failed");
