@@ -6,10 +6,12 @@ import {
   comparePassword,
   generateAccessToken,
   generateRefreshToken,
+  verifyRefreshToken,
 } from "../../lib/auth";
 import { handleError, ConflictError, ValidationError, UnauthorizedError } from "../../lib/errors";
 import { AuthRequest, authMiddleware } from "../../middleware/auth";
 import { createAuditLog } from "../../lib/audit";
+import bcrypt from "bcryptjs";
 
 const router = Router();
 
@@ -53,6 +55,18 @@ router.post("/register", async (req: AuthRequest, res: Response) => {
     // Generate tokens
     const accessToken = generateAccessToken(user.id, user.email, user.role, user.specialty);
     const refreshToken = generateRefreshToken(user.id, user.email, user.role, user.specialty);
+
+    // Persist refresh token (hashed) for revocation
+    const refreshHash = await bcrypt.hash(refreshToken, 10);
+    const refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await prisma.refreshToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: refreshHash,
+        expiresAt: refreshExpiresAt,
+        consumed: false,
+      },
+    });
 
     res.status(201).json({
       success: true,
@@ -106,6 +120,18 @@ router.post("/login", async (req: AuthRequest, res: Response) => {
     const accessToken = generateAccessToken(user.id, user.email, user.role, user.specialty);
     const refreshToken = generateRefreshToken(user.id, user.email, user.role, user.specialty);
 
+    // Persist refresh token (hashed) for revocation
+    const refreshHash = await bcrypt.hash(refreshToken, 10);
+    const refreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await prisma.refreshToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: refreshHash,
+        expiresAt: refreshExpiresAt,
+        consumed: false,
+      },
+    });
+
     res.json({
       success: true,
       data: {
@@ -148,6 +174,119 @@ router.get("/me", authMiddleware, async (req: AuthRequest, res: Response) => {
         role: user.role,
       },
     });
+  } catch (error) {
+    handleError(error, res);
+  }
+});
+
+// Refresh token endpoint
+router.post("/refresh", async (req: AuthRequest, res: Response) => {
+  try {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+      throw new UnauthorizedError("Refresh token required");
+    }
+
+    // Verify and decode refresh token
+    const decoded = verifyRefreshToken(refreshToken);
+    if (!decoded) {
+      throw new UnauthorizedError("Invalid or expired refresh token");
+    }
+
+    // Check if refresh token exists and is not consumed/expired
+    const tokenRecord = await prisma.refreshToken.findFirst({
+      where: {
+        userId: decoded.userId,
+        expiresAt: { gt: new Date() },
+        consumed: false,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!tokenRecord) {
+      throw new UnauthorizedError("Refresh token not found or expired");
+    }
+
+    // Verify token hash matches
+    const tokenHashMatch = await bcrypt.compare(refreshToken, tokenRecord.tokenHash);
+    if (!tokenHashMatch) {
+      throw new UnauthorizedError("Invalid refresh token");
+    }
+
+    // Get user
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedError("User not found");
+    }
+
+    // Generate new access token
+    const newAccessToken = generateAccessToken(user.id, user.email, user.role, user.specialty);
+
+    // Generate new refresh token
+    const newRefreshToken = generateRefreshToken(user.id, user.email, user.role, user.specialty);
+
+    // Persist new refresh token
+    const newRefreshHash = await bcrypt.hash(newRefreshToken, 10);
+    const newRefreshExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await prisma.refreshToken.create({
+      data: {
+        userId: user.id,
+        tokenHash: newRefreshHash,
+        expiresAt: newRefreshExpiresAt,
+        consumed: false,
+      },
+    });
+
+    // Optionally mark old token as consumed
+    await prisma.refreshToken.update({
+      where: { id: tokenRecord.id },
+      data: { consumed: true },
+    });
+
+    res.json({
+      success: true,
+      data: {
+        accessToken: newAccessToken,
+        refreshToken: newRefreshToken,
+      },
+    });
+  } catch (error) {
+    handleError(error, res);
+  }
+});
+
+// Logout endpoint (revoke refresh token)
+router.post("/logout", authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      throw new UnauthorizedError();
+    }
+
+    const { refreshToken } = req.body;
+
+    if (refreshToken) {
+      // Mark all refresh tokens as consumed for this user
+      await prisma.refreshToken.updateMany({
+        where: { userId: req.user.userId },
+        data: { consumed: true },
+      });
+
+      // Audit log
+      await createAuditLog(
+        req.user.userId,
+        "USER_LOGOUT",
+        "USER",
+        req.user.userId,
+        "User logged out",
+        req.ip
+      );
+    }
+
+    res.json({ success: true, message: "Logged out successfully" });
   } catch (error) {
     handleError(error, res);
   }

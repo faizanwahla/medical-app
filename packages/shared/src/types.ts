@@ -143,12 +143,6 @@ export interface ClinicalNote {
   updatedAt: Date;
 }
 
-export interface ClinicalNoteCreateInput {
-  title: string;
-  content: string;
-  tags?: string[];
-}
-
 // API Response types
 export interface ApiResponse<T> {
   success: boolean;

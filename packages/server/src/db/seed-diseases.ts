@@ -1,0 +1,197 @@
+import { prisma } from "../index";
+
+const diseases = [
+  // Respiratory diseases
+  {
+    name: "Pneumonia",
+    icdCode: "J18.9",
+    specialty: "Respiratory Medicine",
+    definition: "Inflammation of lung parenchyma caused by infection",
+    pathophysiology: "Bacterial, viral, or fungal infection causes alveolar consolidation and impaired gas exchange",
+    epidemiology: "Common in winter months, affects immunocompromised individuals",
+    symptoms: ["Cough", "Shortness of breath", "Chest pain", "Fever"],
+    signs: ["Tachypnea", "Crackles", "Decreased breath sounds", "Fever"],
+    diagnosticCriteria: ["CXR infiltrates", "Fever", "Respiratory symptoms"],
+    investigations: ["Chest X-ray", "CBC", "Blood cultures", "Sputum culture"],
+    management: "Antibiotics, oxygen support, hydration, supportive care",
+    prognosis: "Good with early treatment, depends on causative organism",
+    reference: "Harrison's Principles of Internal Medicine",
+    vitalSigns: { bp: { normal: "120/80" }, hr: { normal: "60-100", elevated: ">100" }, temp: { normal: "37", abnormal: ">38" }, rr: { normal: "12-20", elevated: ">20" }, o2: { normal: ">95", low: "<90" } }
+  },
+  {
+    name: "Asthma",
+    icdCode: "J45.9",
+    specialty: "Respiratory Medicine",
+    definition: "Chronic inflammatory airway disease characterized by reversible airflow obstruction",
+    pathophysiology: "Airway inflammation, bronchoconstriction, and mucus production lead to airflow limitation",
+    epidemiology: "Affects 5-10% of population, common in children and young adults",
+    symptoms: ["Cough", "Shortness of breath", "Wheezing", "Chest tightness"],
+    signs: ["Wheezing", "Decreased breath sounds", "Tachypnea"],
+    diagnosticCriteria: ["FEV1/FVC <70%", "Reversibility with bronchodilators"],
+    investigations: ["Spirometry", "Peak flow", "Chest X-ray"],
+    management: "Beta-2 agonists, inhaled corticosteroids, avoid triggers",
+    prognosis: "Good with proper management and trigger avoidance",
+    reference: "GINA Guidelines",
+    vitalSigns: { bp: { normal: "120/80" }, hr: { normal: "60-100", elevated: ">100" }, rr: { normal: "12-20", elevated: ">20" }, o2: { normal: ">95", low: "<92" } }
+  },
+  {
+    name: "Myocardial Infarction",
+    icdCode: "I21.9",
+    specialty: "Cardiology",
+    definition: "Acute necrosis of myocardium due to ischemia",
+    pathophysiology: "Coronary artery occlusion prevents blood flow causing myocardial necrosis",
+    epidemiology: "Leading cause of mortality in developed countries",
+    symptoms: ["Chest pain", "Shortness of breath", "Palpitations", "Nausea"],
+    signs: ["Tachycardia", "Hypotension", "Cyanosis", "Arrhythmia"],
+    diagnosticCriteria: ["ST elevation", "Elevated troponin", "Chest pain"],
+    investigations: ["ECG", "Troponin", "Echocardiogram", "Coronary angiography"],
+    management: "Antiplatelet therapy, revascularization, beta-blockers, ACE inhibitors",
+    prognosis: "Depends on extent of infarction and time to treatment",
+    reference: "ACC/AHA Guidelines",
+    vitalSigns: { bp: { normal: "120/80", low: "<90/60" }, hr: { normal: "60-100", elevated: ">100" }, temp: { normal: "37" } }
+  },
+  {
+    name: "Type 2 Diabetes Mellitus",
+    icdCode: "E11.9",
+    specialty: "Endocrinology",
+    definition: "Metabolic disorder characterized by hyperglycemia due to insulin resistance",
+    pathophysiology: "Impaired pancreatic beta cell function and peripheral insulin resistance",
+    epidemiology: "Affects 400+ million people worldwide, increasing prevalence",
+    symptoms: ["Polyuria", "Polydipsia", "Fatigue", "Weakness"],
+    signs: ["Obesity", "Acanthosis nigricans"],
+    diagnosticCriteria: ["Fasting glucose >126", "HbA1c >6.5%", "Random glucose >200"],
+    investigations: ["Fasting glucose", "HbA1c", "Oral glucose tolerance test"],
+    management: "Lifestyle modification, metformin, other oral agents, insulin",
+    prognosis: "Manageable with good glycemic control and lifestyle",
+    reference: "ADA Standards of Care",
+    vitalSigns: { glucose: { normal: "90-120", elevated: ">200" } }
+  },
+  {
+    name: "Hypertension",
+    icdCode: "I10",
+    specialty: "Cardiology",
+    definition: "Sustained elevation of arterial blood pressure",
+    pathophysiology: "Increased vascular resistance and/or increased cardiac output",
+    epidemiology: "Affects 1+ billion people worldwide, major risk factor for CVD",
+    symptoms: ["Headache", "Dizziness", "Chest pain"],
+    signs: ["Hypertension", "Papilledema", "Retinal changes"],
+    diagnosticCriteria: ["SBP >130 or DBP >80 on repeated measurements"],
+    investigations: ["Home BP monitoring", "24-hour ambulatory BP", "ECG"],
+    management: "Lifestyle modification, ACE inhibitors, ARBs, beta-blockers",
+    prognosis: "Good with treatment, prevents complications",
+    reference: "ACC/AHA Guidelines",
+    vitalSigns: { bp: { normal: "<120/80", elevated: "130-139/80-89", stage2: ">140/90" } }
+  },
+  {
+    name: "Acute Gastroenteritis",
+    icdCode: "A09",
+    specialty: "Gastroenterology",
+    definition: "Inflammation of stomach and intestinal mucosa",
+    pathophysiology: "Viral or bacterial infection causes mucosal inflammation and increased secretion",
+    epidemiology: "Common worldwide, self-limited in most cases",
+    symptoms: ["Diarrhea", "Vomiting", "Abdominal pain", "Fever"],
+    signs: ["Abdominal tenderness", "Fever"],
+    diagnosticCriteria: ["History of diarrhea and vomiting", "Recent infectious exposure"],
+    investigations: ["Stool culture", "CBC", "Electrolytes"],
+    management: "Supportive care, fluid and electrolyte replacement, antiemetics",
+    prognosis: "Excellent, usually self-limiting in 1-7 days",
+    reference: "WHO Guidelines",
+    vitalSigns: { temp: { normal: "37", elevated: ">38" }, bp: { normal: "120/80" }, hr: { normal: "60-100", elevated: ">100" } }
+  },
+  {
+    name: "Appendicitis",
+    icdCode: "K37",
+    specialty: "Surgery",
+    definition: "Acute inflammation of the appendix",
+    pathophysiology: "Obstruction of appendiceal lumen leads to inflammation and potential perforation",
+    epidemiology: "Most common surgical emergency, peak incidence 10-30 years",
+    symptoms: ["Abdominal pain", "Nausea", "Vomiting", "Fever"],
+    signs: ["Rebound tenderness", "Guarding", "McBurney's point tenderness", "Fever"],
+    diagnosticCriteria: ["Clinical examination findings", "Elevated WBC", "Imaging findings"],
+    investigations: ["CBC", "CT abdomen/pelvis", "Ultrasound"],
+    management: "Appendectomy, antibiotics, fluid resuscitation",
+    prognosis: "Good with surgery, mortality increases with perforation",
+    reference: "Surgical Textbooks",
+    vitalSigns: { temp: { normal: "37", elevated: ">38" }, hr: { normal: "60-100", elevated: ">100" }, bp: { normal: "120/80" } }
+  },
+  {
+    name: "Congestive Heart Failure",
+    icdCode: "I50.9",
+    specialty: "Cardiology",
+    definition: "Inability of heart to pump adequate blood for body's needs",
+    pathophysiology: "Systolic and/or diastolic dysfunction leads to reduced cardiac output",
+    epidemiology: "Affects 5-10 million in developed countries",
+    symptoms: ["Shortness of breath", "Fatigue", "Edema", "Palpitations"],
+    signs: ["Peripheral edema", "Jugular venous distension", "Crackles", "S3 gallop"],
+    diagnosticCriteria: ["BNP >35 pg/mL", "Echocardiographic findings"],
+    investigations: ["Echocardiogram", "BNP", "ECG", "Chest X-ray"],
+    management: "ACE inhibitors, beta-blockers, diuretics, salt restriction",
+    prognosis: "Chronic condition, mortality depends on ejection fraction",
+    reference: "ACC/AHA Guidelines",
+    vitalSigns: { bp: { normal: "120/80", low: "<90/60" }, hr: { normal: "60-100", elevated: ">100" } }
+  },
+  {
+    name: "Urinary Tract Infection",
+    icdCode: "N39.0",
+    specialty: "Urology",
+    definition: "Bacterial infection of urinary system",
+    pathophysiology: "Bacterial ascension through urethra causes inflammation",
+    epidemiology: "Very common, especially in women",
+    symptoms: ["Dysuria", "Frequency", "Urgency", "Suprapubic pain"],
+    signs: ["Suprapubic tenderness"],
+    diagnosticCriteria: ["Pyuria", "Bacteriuria", "Positive urine culture"],
+    investigations: ["Urinalysis", "Urine culture", "Ultrasound if complicated"],
+    management: "Antibiotics (TMP-SMX, nitrofurantoin, fluoroquinolones)",
+    prognosis: "Excellent with antibiotic treatment",
+    reference: "Infectious Disease Guidelines",
+    vitalSigns: { temp: { normal: "37", elevated: ">37.5" } }
+  },
+  {
+    name: "Sepsis",
+    icdCode: "A41.9",
+    specialty: "Critical Care",
+    definition: "Life-threatening organ dysfunction caused by dysregulated immune response to infection",
+    pathophysiology: "Systemic inflammatory response to infection causes organ damage",
+    epidemiology: "Common in ICU, high mortality rate",
+    symptoms: ["Fever", "Chills", "Confusion", "Tachypnea", "Tachycardia"],
+    signs: ["Fever", "Tachycardia", "Tachypnea", "Altered mental status", "Hypotension"],
+    diagnosticCriteria: ["qSOFA criteria", "Lactate >2", "Evidence of infection"],
+    investigations: ["Blood cultures", "CBC", "Lactate", "Imaging as indicated"],
+    management: "Antibiotics, fluid resuscitation, vasopressors, source control",
+    prognosis: "High mortality even with treatment, depends on time to treatment",
+    reference: "Surviving Sepsis Campaign",
+    vitalSigns: { temp: { high: ">38" }, hr: { elevated: ">90" }, rr: { elevated: ">20" }, bp: { low: "<90/60" } }
+  },
+  {
+    name: "Pneumothorax",
+    icdCode: "J93.9",
+    specialty: "Respiratory Medicine",
+    definition: "Air in pleural space causing partial or complete lung collapse",
+    pathophysiology: "Rupture of pleural surface allows air into pleural space",
+    epidemiology: "Primary type more common in young, tall males",
+    symptoms: ["Chest pain", "Shortness of breath"],
+    signs: ["Decreased breath sounds", "Hyperresonance", "Decreased chest expansion"],
+    diagnosticCriteria: ["Chest X-ray findings"],
+    investigations: ["Chest X-ray", "CT chest"],
+    management: "Observation for small PTX, chest tube for large or symptomatic",
+    prognosis: "Good in primary PTX, higher recurrence risk in secondary",
+    reference: "Respiratory Medicine Guidelines",
+    vitalSigns: { rr: { normal: "12-20", elevated: ">20" }, o2: { normal: ">95", low: "<90" }, hr: { elevated: ">100" } }
+  }
+];
+
+async function seedDiseases() {
+  console.log("🌱 Seeding disease database...");
+
+  for (const disease of diseases) {
+    await prisma.disease.upsert({
+      where: { icdCode: disease.icdCode },
+      update: disease,
+      create: disease,
+    });
+  }
+
+  console.log(`✅ Seeded ${diseases.length} diseases with vital signs information`);
+}
+
+export { seedDiseases };

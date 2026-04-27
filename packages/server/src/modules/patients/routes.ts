@@ -1,7 +1,7 @@
 import { Router, Response } from "express";
 import { prisma } from "../../index";
 import { PatientCreateSchema, PatientUpdateSchema } from "@medical-app/shared";
-import { authMiddleware, AuthRequest } from "../../middleware/auth";
+import { authMiddleware, AuthRequest, roleCheck } from "../../middleware/auth";
 import { handleError, NotFoundError, ValidationError } from "../../lib/errors";
 import { createAuditLog } from "../../lib/audit";
 
@@ -150,8 +150,8 @@ router.put("/:id", async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Delete patient
-router.delete("/:id", async (req: AuthRequest, res: Response) => {
+// Delete patient (only ADMIN or PHYSICIAN)
+router.delete("/:id", roleCheck(["ADMIN", "PHYSICIAN"]), async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) throw new Error("Not authenticated");
 

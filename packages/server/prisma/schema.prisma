@@ -9,14 +9,15 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(cuid())
-  email     String    @unique
-  password  String
-  specialty String
-  role      UserRole  @default(PHYSICIAN)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  patients  Patient[]
+  id             String         @id @default(cuid())
+  email          String         @unique
+  password       String
+  specialty      String
+  role           UserRole       @default(PHYSICIAN)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  patients       Patient[]
+  refreshTokens  RefreshToken[]
 
   @@index([email])
 }
@@ -26,6 +27,19 @@ enum UserRole {
   PHYSICIAN
   NURSE
   RECEPTIONIST
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String
+  expiresAt DateTime
+  consumed  Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 model Patient {
@@ -49,6 +63,7 @@ model Patient {
   user                  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   treatments            Treatment[]
   vitals                Vital[]
+  clinicalNotes         ClinicalNote[]
 
   @@index([userId])
 }
@@ -62,8 +77,11 @@ model Vital {
   bloodPressureSystolic  Int?
   bloodPressureDiastolic Int?
   oxygenSaturation       Float?
-  recordedAt             DateTime @default(now())
+  bloodGlucose           Float?   // New: Blood glucose in mg/dL
+  weight                 Float?   // New: Weight in kg
+  height                 Float?   // New: Height in cm
   notes                  String?
+  recordedAt             DateTime @default(now())
   createdAt              DateTime @default(now())
   patient                Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
@@ -151,10 +169,33 @@ model Disease {
   management         String
   prognosis          String
   reference          String
+  vitalSigns         Json?    // Expected vital sign ranges: {bp: {sys: "120-130", dia: "80-90"}, hr: "60-100", temp: "37-38", glucose: "90-120"}
   createdAt          DateTime @default(now())
 
   @@index([specialty])
   @@index([icdCode])
+}
+
+model Symptom {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  system      String   // e.g., "Respiratory", "Gastrointestinal", "Neurological"
+  severity    String?  // Optional: mild, moderate, severe
+  createdAt   DateTime @default(now())
+
+  @@index([system])
+}
+
+model Sign {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  system      String   // e.g., "Cardiovascular", "Respiratory", "Neurological"
+  examination String?  // Type of examination needed: auscultation, palpation, etc.
+  createdAt   DateTime @default(now())
+
+  @@index([system])
 }
 
 model Specialty {
@@ -177,4 +218,19 @@ model AuditLog {
   @@index([userId])
   @@index([action])
   @@index([createdAt])
+}
+
+model ClinicalNote {
+  id        String    @id @default(cuid())
+  patientId String
+  patient   Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  title     String
+  content   String    @db.Text
+  tags      String[]  @default([])
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([patientId])
 }

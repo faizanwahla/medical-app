@@ -1,7 +1,7 @@
 import { Router, Response } from "express";
 import { prisma } from "../../index";
 import { TreatmentCreateSchema } from "@medical-app/shared";
-import { authMiddleware, AuthRequest } from "../../middleware/auth";
+import { authMiddleware, AuthRequest, roleCheck } from "../../middleware/auth";
 import { handleError, NotFoundError } from "../../lib/errors";
 
 const router = Router();
@@ -62,7 +62,7 @@ router.get("/patient/:patientId/active", async (req: AuthRequest, res: Response)
 });
 
 // Add treatment
-router.post("/patient/:patientId", async (req: AuthRequest, res: Response) => {
+router.post("/patient/:patientId", roleCheck(["ADMIN", "PHYSICIAN"]), async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) throw new Error("Not authenticated");
 

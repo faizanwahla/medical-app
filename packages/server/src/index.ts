@@ -6,14 +6,17 @@ import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
 
 // Import routes
-import authRoutes from "./modules/auth/routes";
-import patientRoutes from "./modules/patients/routes";
-import vitalsRoutes from "./modules/vitals/routes";
-import investigationRoutes from "./modules/investigations/routes";
-import treatmentRoutes from "./modules/treatments/routes";
-import medicineRoutes from "./modules/medicines/routes";
-import diagnosisRoutes from "./modules/diagnosis/routes";
-import reportsRoutes from "./modules/reports/routes";
+import authRoutes from "./modules/auth/routes.js";
+import patientRoutes from "./modules/patients/routes.js";
+import vitalsRoutes from "./modules/vitals/routes.js";
+import investigationRoutes from "./modules/investigations/routes.js";
+import treatmentRoutes from "./modules/treatments/routes.js";
+import medicineRoutes from "./modules/medicines/routes.js";
+import diagnosisRoutes from "./modules/diagnosis/routes.js";
+import reportsRoutes from "./modules/reports/routes.js";
+import notesRoutes from "./modules/notes/routes.js";
+import symptomsRoutes from "./modules/symptoms/routes.js";
+import signsRoutes from "./modules/signs/routes.js";
 
 // Load environment variables
 dotenv.config();
@@ -30,10 +33,13 @@ app.use(helmet());
 
 // CORS - configure allowed origins from env
 const allowedOrigins = process.env.CORS_ORIGIN?.split(",") || ["http://localhost:3000"];
-app.use(cors({
-  origin: "*",
-  credentials: true,
-}));
+// Use the configured allowedOrigins instead of a wildcard to respect env-based policy
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+  })
+);
 
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
@@ -48,6 +54,19 @@ const limiter = rateLimit({
 });
 app.use("/api/", limiter);
 
+// Strict rate limiting for authentication endpoints (5 requests per 15 minutes)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { success: false, error: "Too many authentication attempts, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    // Only apply to login and register endpoints
+    return !req.path.includes("/login") && !req.path.includes("/register");
+  },
+});
+
 // Logging middleware
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
@@ -60,7 +79,7 @@ app.get("/health", (req, res) => {
 });
 
 // API Routes
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", authLimiter, authRoutes);
 app.use("/api/patients", patientRoutes);
 app.use("/api/vitals", vitalsRoutes);
 app.use("/api/investigations", investigationRoutes);
@@ -68,6 +87,9 @@ app.use("/api/treatments", treatmentRoutes);
 app.use("/api/medicines", medicineRoutes);
 app.use("/api/diagnosis", diagnosisRoutes);
 app.use("/api/reports", reportsRoutes);
+app.use("/api/notes", notesRoutes);
+app.use("/api/symptoms", symptomsRoutes);
+app.use("/api/signs", signsRoutes);
 
 // Error handling middleware
 app.use(

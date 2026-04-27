@@ -73,15 +73,29 @@ export async function generateDifferentialDiagnosis(
     .sort((a, b) => b.score - a.score)
     .slice(0, 10);
 
-  // Format results
-  return scoredDiseases.map((item) => ({
-    diagnosis: item.disease.name,
-    probability: Math.min(98, Math.round((item.score / 150) * 100)), // Scaled for higher precision
-    reasoning: generateReasoning(item, specialty),
-    investigations: item.disease.investigations,
-    management: item.disease.management,
-    reference: item.disease.reference,
-  }));
+  // Calculate maximum possible score for calibration
+  const maxPossibleScore = 
+    (symptoms.length * 30) + 
+    (signs.length * 25) + 
+    20 + // specialty bonus
+    ((symptoms.length + signs.length) * 10) + // context
+    10; // age
+
+  // Format results with calibrated probability
+  return scoredDiseases.map((item) => {
+    // Normalize probability: use actual max score instead of hardcoded 150
+    const normalizedScore = (item.score / Math.max(maxPossibleScore, 100)) * 100;
+    const probability = Math.min(98, Math.round(normalizedScore));
+
+    return {
+      diagnosis: item.disease.name,
+      probability,
+      reasoning: generateReasoning(item, specialty),
+      investigations: item.disease.investigations,
+      management: item.disease.management,
+      reference: item.disease.reference,
+    };
+  });
 }
 
 function generateReasoning(item: any, userSpecialty: string): string {
@@ -100,7 +114,7 @@ function generateReasoning(item: any, userSpecialty: string): string {
 }
 
 /**
- * Save DDx suggestions to database
+ * Save DDx suggestions to database using createMany for performance
  */
 export async function saveDifferentialDiagnoses(
   patientId: string,
@@ -111,16 +125,16 @@ export async function saveDifferentialDiagnoses(
     where: { patientId },
   });
 
-  // Save new suggestions
-  for (const suggestion of suggestions) {
-    await prisma.differentialDiagnosis.create({
-      data: {
+  // Save new suggestions using createMany (single DB roundtrip instead of N)
+  if (suggestions.length > 0) {
+    await prisma.differentialDiagnosis.createMany({
+      data: suggestions.map((suggestion) => ({
         patientId,
         diagnosis: suggestion.diagnosis,
         probability: suggestion.probability,
         reasoning: suggestion.reasoning,
         goldStandardReference: suggestion.reference,
-      },
+      })),
     });
   }
 }

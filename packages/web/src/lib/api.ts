@@ -155,6 +155,27 @@ class ApiClient {
     return response.data;
   }
 
+  // Note endpoints
+  async getNotes(patientId: string) {
+    const response = await this.client.get(`/notes/patient/${patientId}`);
+    return response.data;
+  }
+
+  async createNote(patientId: string, data: any) {
+    const response = await this.client.post(`/notes/patient/${patientId}`, data);
+    return response.data;
+  }
+
+  async updateNote(id: string, data: any) {
+    const response = await this.client.put(`/notes/${id}`, data);
+    return response.data;
+  }
+
+  async deleteNote(id: string) {
+    const response = await this.client.delete(`/notes/${id}`);
+    return response.data;
+  }
+
   // Medicine endpoints
   async getMedicines(search?: string, type?: string) {
     const response = await this.client.get("/medicines", {
