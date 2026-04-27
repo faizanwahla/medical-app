@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 export interface JWTPayload {
   userId: string;
   email: string;
+  specialty?: string;
   iat?: number;
   exp?: number;
 }
@@ -11,14 +12,14 @@ export interface JWTPayload {
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret";
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "your-refresh-secret";
 
-export const generateAccessToken = (userId: string, email: string): string => {
-  return jwt.sign({ userId, email }, JWT_SECRET, {
+export const generateAccessToken = (userId: string, email: string, specialty?: string): string => {
+  return jwt.sign({ userId, email, specialty }, JWT_SECRET, {
     expiresIn: "15m",
   });
 };
 
-export const generateRefreshToken = (userId: string, email: string): string => {
-  return jwt.sign({ userId, email }, JWT_REFRESH_SECRET, {
+export const generateRefreshToken = (userId: string, email: string, specialty?: string): string => {
+  return jwt.sign({ userId, email, specialty }, JWT_REFRESH_SECRET, {
     expiresIn: "7d",
   });
 };

@@ -5,6 +5,7 @@ import { ApiError } from "@medical-app/shared";
 export const handleError = (error: any, res: Response) => {
   // Zod validation error
   if (error instanceof ZodError) {
+    console.error("ZOD VALIDATION ERROR:", JSON.stringify(error.errors, null, 2));
     return res.status(400).json({
       success: false,
       error: "Validation failed",

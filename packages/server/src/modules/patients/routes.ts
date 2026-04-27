@@ -77,11 +77,13 @@ router.post("/", async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) throw new Error("Not authenticated");
 
-    const input = PatientCreateSchema.parse(req.body);
+    const { specialty, ...patientData } = PatientCreateSchema.parse(req.body);
+
+
 
     const patient = await prisma.patient.create({
       data: {
-        ...input,
+        ...patientData,
         userId: req.user.userId,
       },
     });

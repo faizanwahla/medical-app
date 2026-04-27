@@ -22,15 +22,8 @@ export async function generateDifferentialDiagnosis(
     return [];
   }
 
-  // Get all diseases for the specialty
-  const diseases = await prisma.disease.findMany({
-    where: {
-      specialty: {
-        contains: specialty,
-        mode: "insensitive",
-      },
-    },
-  });
+  // Get all diseases
+  const diseases = await prisma.disease.findMany();
 
   // Score each disease based on symptom/sign matches
   const scoredDiseases = diseases

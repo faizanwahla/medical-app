@@ -38,22 +38,6 @@ export interface Patient {
   updatedAt: Date;
 }
 
-export interface PatientCreateInput {
-  firstName: string;
-  lastName: string;
-  age: number;
-  gender: string;
-  bloodType?: string;
-  allergies?: string[];
-  pastMedicalHistory?: string[];
-  presentingComplaint?: string;
-  durationOfIllness?: string;
-  systemicReview?: string;
-  examFindings?: string;
-}
-
-export interface PatientUpdateInput extends Partial<PatientCreateInput> {}
-
 // Vital Signs
 export interface Vital {
   id: string;
@@ -65,17 +49,6 @@ export interface Vital {
   bloodPressureDiastolic?: number;
   oxygenSaturation?: number;
   recordedAt: Date;
-  notes?: string;
-}
-
-export interface VitalCreateInput {
-  temperature?: number;
-  pulse?: number;
-  respiratoryRate?: number;
-  bloodPressureSystolic?: number;
-  bloodPressureDiastolic?: number;
-  oxygenSaturation?: number;
-  recordedAt?: Date;
   notes?: string;
 }
 
@@ -132,14 +105,6 @@ export interface Investigation {
   createdAt: Date;
 }
 
-export interface InvestigationCreateInput {
-  name: string;
-  type: "Lab" | "Imaging" | "ECG" | "Other";
-  result?: string;
-  normalRange?: string;
-  interpretation?: string;
-}
-
 // Medicine and Treatment types
 export interface Medicine {
   id: string;
@@ -164,15 +129,6 @@ export interface Treatment {
   status: "Active" | "Completed" | "Discontinued";
   startedAt: Date;
   endedAt?: Date;
-}
-
-export interface TreatmentCreateInput {
-  medicineId: string;
-  dosage: string;
-  frequency: string;
-  duration: string;
-  instructions?: string;
-  startedAt?: Date;
 }
 
 // API Response types

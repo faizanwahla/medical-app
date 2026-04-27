@@ -1,4 +1,4 @@
-import { Router, Response } from "express";
+import { Router, Request, Response } from "express";
 import { prisma } from "../../lib/prisma";
 import { RegisterSchema, LoginSchema } from "@medical-app/shared";
 import {
@@ -39,8 +39,8 @@ router.post("/register", async (req: AuthRequest, res: Response) => {
     });
 
     // Generate tokens
-    const accessToken = generateAccessToken(user.id, user.email);
-    const refreshToken = generateRefreshToken(user.id, user.email);
+    const accessToken = generateAccessToken(user.id, user.email, user.specialty);
+    const refreshToken = generateRefreshToken(user.id, user.email, user.specialty);
 
     res.status(201).json({
       success: true,
@@ -80,8 +80,8 @@ router.post("/login", async (req: AuthRequest, res: Response) => {
     }
 
     // Generate tokens
-    const accessToken = generateAccessToken(user.id, user.email);
-    const refreshToken = generateRefreshToken(user.id, user.email);
+    const accessToken = generateAccessToken(user.id, user.email, user.specialty);
+    const refreshToken = generateRefreshToken(user.id, user.email, user.specialty);
 
     res.json({
       success: true,

@@ -4,7 +4,7 @@ import apiClient from "../../lib/api";
 
 interface LoginPageProps {
   onSwitchToRegister: () => void;
-  onLoginSuccess: () => void;
+  onLoginSuccess: (token: string) => void;
 }
 
 export default function LoginPage({
@@ -24,15 +24,30 @@ export default function LoginPage({
 
     try {
       const response = await apiClient.login(email, password);
+      
       if (response.success) {
-        setAccessToken(response.data.accessToken);
+        // 1. Get the token (checking both common names)
+        const token = response.data.accessToken || response.data.token;
+        
+        if (!token) {
+          throw new Error("No token received from server");
+        }
+
+        // 2. IMPORTANT: Update the API Client first so the next request works!
+        apiClient.setAccessToken(token);
+
+        // 3. Update the Zustand store
+        setAccessToken(token);
         setUser(response.data.user);
-        onLoginSuccess();
+
+        // 4. Call callback with token
+        onLoginSuccess(token);
       } else {
         setError(response.error || "Login failed");
       }
     } catch (err: any) {
-      setError(err.response?.data?.error || "Login failed");
+      console.error("Login detail:", err);
+      setError(err.response?.data?.error || err.message || "Login failed");
     } finally {
       setLoading(false);
     }

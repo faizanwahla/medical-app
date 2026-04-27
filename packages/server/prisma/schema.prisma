@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["fullTextIndex"]
@@ -12,125 +9,105 @@ datasource db {
 }
 
 model User {
-  id        String     @id @default(cuid())
-  email     String     @unique
+  id        String    @id @default(cuid())
+  email     String    @unique
   password  String
   specialty String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   patients  Patient[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
 
   @@index([email])
 }
 
 model Patient {
-  id                   String    @id @default(cuid())
-  userId               String
-  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Biodata
-  firstName            String
-  lastName             String
-  age                  Int
-  gender               String
-  bloodType            String?
-  allergies            String[]  @default([])
-  pastMedicalHistory   String[]  @default([])
-
-  // Current presentation
-  presentingComplaint  String?
-  durationOfIllness    String?
-  systemicReview       String?
-  examFindings         String?
-
-  // Relationships
-  vitals               Vital[]
+  id                    String                  @id @default(cuid())
+  userId                String
+  firstName             String
+  lastName              String
+  age                   Int
+  gender                String
+  bloodType             String?
+  allergies             String[]                @default([])
+  pastMedicalHistory    String[]                @default([])
+  presentingComplaint   String?
+  durationOfIllness     String?
+  systemicReview        String?
+  examFindings          String?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
   differentialDiagnoses DifferentialDiagnosis[]
-  investigations       Investigation[]
-  treatments           Treatment[]
-
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  investigations        Investigation[]
+  user                  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  treatments            Treatment[]
+  vitals                Vital[]
 
   @@index([userId])
-  //@@fulltext([firstName, lastName])
 }
 
 model Vital {
-  id                   String    @id @default(cuid())
-  patientId            String
-  patient              Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
-
-  temperature          Float?
-  pulse                Int?
-  respiratoryRate      Int?
-  bloodPressureSystolic Int?
+  id                     String   @id @default(cuid())
+  patientId              String
+  temperature            Float?
+  pulse                  Int?
+  respiratoryRate        Int?
+  bloodPressureSystolic  Int?
   bloodPressureDiastolic Int?
-  oxygenSaturation     Float?
-
-  recordedAt           DateTime  @default(now())
-  notes                String?
-
-  createdAt            DateTime  @default(now())
+  oxygenSaturation       Float?
+  recordedAt             DateTime @default(now())
+  notes                  String?
+  createdAt              DateTime @default(now())
+  patient                Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   @@index([patientId])
   @@index([recordedAt])
 }
 
 model DifferentialDiagnosis {
-  id                   String    @id @default(cuid())
-  patientId            String
-  patient              Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
-
-  diagnosis            String
-  probability          Float     // 0-100
-  reasoning            String    @db.Text
+  id                    String   @id @default(cuid())
+  patientId             String
+  diagnosis             String
+  probability           Float
+  reasoning             String
   goldStandardReference String
-
-  createdAt            DateTime  @default(now())
+  createdAt             DateTime @default(now())
+  patient               Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   @@index([patientId])
 }
 
 model Investigation {
-  id                   String    @id @default(cuid())
-  patientId            String
-  patient              Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
-
-  name                 String
-  type                 String    // "Lab", "Imaging", "ECG", "Other"
-  status               String    // "Pending", "Completed", "Reviewed"
-
-  requestedAt          DateTime  @default(now())
-  resultAt             DateTime?
-  result               String?   @db.Text
-  normalRange          String?
-  interpretation       String?   @db.Text
-
-  createdAt            DateTime  @default(now())
+  id             String    @id @default(cuid())
+  patientId      String
+  name           String
+  type           String
+  status         String
+  requestedAt    DateTime  @default(now())
+  resultAt       DateTime?
+  result         String?
+  normalRange    String?
+  interpretation String?
+  createdAt      DateTime  @default(now())
+  patient        Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   @@index([patientId])
   @@index([status])
 }
 
 model Treatment {
-  id                   String    @id @default(cuid())
-  patientId            String
-  patient              Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
-
-  medicineId           String
-  medicine             Medicine  @relation(fields: [medicineId], references: [id])
-
-  dosage               String
-  frequency            String
-  duration             String
-  instructions         String?
-  status               String    // "Active", "Completed", "Discontinued"
-
-  startedAt            DateTime  @default(now())
-  endedAt              DateTime?
-
-  createdAt            DateTime  @default(now())
+  id           String    @id @default(cuid())
+  patientId    String
+  medicineId   String
+  dosage       String
+  frequency    String
+  duration     String
+  instructions String?
+  status       String
+  startedAt    DateTime  @default(now())
+  endedAt      DateTime?
+  createdAt    DateTime  @default(now())
+  medicine     Medicine  @relation(fields: [medicineId], references: [id])
+  patient      Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   @@index([patientId])
   @@index([medicineId])
@@ -138,52 +115,43 @@ model Treatment {
 }
 
 model Medicine {
-  id                   String    @id @default(cuid())
-  name                 String    @unique
-  type                 String
-  uses                 String[]
-  dosage               String
-  sideEffects          String[]  @default([])
-  contraindications    String[]  @default([])
-  treatments           Treatment[]
-
-  createdAt            DateTime  @default(now())
+  id                String      @id @default(cuid())
+  name              String      @unique
+  type              String
+  uses              String[]
+  dosage            String
+  sideEffects       String[]    @default([])
+  contraindications String[]    @default([])
+  createdAt         DateTime    @default(now())
+  treatments        Treatment[]
 
   @@index([type])
-  //@@fulltext([name, type])
 }
 
 model Disease {
-  id                   String    @id @default(cuid())
-  name                 String
-  icdCode              String    @unique
-  specialty            String
-
-  definition           String    @db.Text
-  pathophysiology      String    @db.Text
-  epidemiology         String    @db.Text
-
-  symptoms             String[]  @default([])
-  signs                String[]  @default([])
-  diagnosticCriteria   String[]  @default([])
-
-  investigations       String[]  @default([])
-  management           String    @db.Text
-  prognosis            String    @db.Text
-
-  reference            String
-
-  createdAt            DateTime  @default(now())
+  id                 String   @id @default(cuid())
+  name               String
+  icdCode            String   @unique
+  specialty          String
+  definition         String
+  pathophysiology    String
+  epidemiology       String
+  symptoms           String[] @default([])
+  signs              String[] @default([])
+  diagnosticCriteria String[] @default([])
+  investigations     String[] @default([])
+  management         String
+  prognosis          String
+  reference          String
+  createdAt          DateTime @default(now())
 
   @@index([specialty])
   @@index([icdCode])
-  //@@fulltext([name, symptoms])
 }
 
 model Specialty {
-  id                   String    @id @default(cuid())
-  name                 String    @unique
-  description          String
-
-  createdAt            DateTime  @default(now())
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String
+  createdAt   DateTime @default(now())
 }

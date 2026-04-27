@@ -1,4 +1,4 @@
-import { Router, Response } from "express";
+import { Router, Request, Response } from "express";
 import { prisma } from "../../lib/prisma";
 import { authMiddleware, AuthRequest } from "../../middleware/auth";
 import { handleError, NotFoundError } from "../../lib/errors";
@@ -6,7 +6,7 @@ import { handleError, NotFoundError } from "../../lib/errors";
 const router = Router();
 
 // Get all medicines (public endpoint, no auth needed)
-router.get("/", async (req: Response, res: Response) => {
+router.get("/", async (req: Request, res: Response) => {
   try {
     const search = req.query.search as string;
     const type = req.query.type as string;
@@ -51,7 +51,7 @@ router.get("/", async (req: Response, res: Response) => {
 });
 
 // Get single medicine
-router.get("/:id", async (req: Response, res: Response) => {
+router.get("/:id", async (req: Request, res: Response) => {
   try {
     const medicine = await prisma.medicine.findUnique({
       where: { id: req.params.id },

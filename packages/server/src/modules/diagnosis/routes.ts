@@ -1,4 +1,4 @@
-import { Router, Response } from "express";
+import { Router, Request, Response } from "express";
 import { prisma } from "../../lib/prisma";
 import { authMiddleware, AuthRequest } from "../../middleware/auth";
 import { handleError, NotFoundError } from "../../lib/errors";
@@ -80,7 +80,7 @@ router.get("/:patientId", async (req: AuthRequest, res: Response) => {
 });
 
 // Get disease details
-router.get("/disease/:id", async (req: Response, res: Response) => {
+router.get("/disease/:id", async (req: Request, res: Response) => {
   try {
     const disease = await prisma.disease.findUnique({
       where: { id: req.params.id },
@@ -97,7 +97,7 @@ router.get("/disease/:id", async (req: Response, res: Response) => {
 });
 
 // Search diseases
-router.get("/search/query", async (req: Response, res: Response) => {
+router.get("/search/query", async (req: Request, res: Response) => {
   try {
     const query = (req.query.q as string) || "";
     const specialty = (req.query.specialty as string) || "";
@@ -123,6 +123,18 @@ router.get("/search/query", async (req: Response, res: Response) => {
       take: 20,
     });
 
+    res.json({ success: true, data: diseases });
+  } catch (error) {
+    handleError(error, res);
+  }
+});
+
+// Get all diseases (Library)
+router.get("/library", async (req: Request, res: Response) => {
+  try {
+    const diseases = await prisma.disease.findMany({
+      orderBy: { name: "asc" },
+    });
     res.json({ success: true, data: diseases });
   } catch (error) {
     handleError(error, res);

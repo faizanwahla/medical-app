@@ -85,7 +85,7 @@ export default function RegisterPage({
             <select
               className="input"
               value={specialty}
-              onChange={(e) => setSpecialty(e.target.value)}
+              onChange={(e) => setSpecialty(e.target.value as typeof specialty)}
             >
               {SPECIALTIES.map((spec) => (
                 <option key={spec} value={spec}>

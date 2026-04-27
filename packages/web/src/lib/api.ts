@@ -1,5 +1,4 @@
 import axios, { AxiosInstance, AxiosError } from "axios";
-import { ApiResponse } from "@medical-app/shared";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
@@ -28,10 +27,16 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
-        if (error.response?.status === 401) {
-          // Token expired, redirect to login
+        // Only redirect if it's a 401 AND we aren't already on the login page
+        if (error.response?.status === 401 && window.location.pathname !== "/") {
+          console.warn("Unauthorized request - clearing session");
           localStorage.removeItem("accessToken");
-          window.location.href = "/login";
+          
+          // Instead of window.location.href, we let the App state handle it
+          // or only redirect if absolutely necessary.
+          if (window.location.pathname !== "/login") {
+            window.location.href = "/"; 
+          }
         }
         return Promise.reject(error);
       }
@@ -41,6 +46,9 @@ class ApiClient {
   setAccessToken(token: string) {
     this.accessToken = token;
     localStorage.setItem("accessToken", token);
+    
+    // CRITICAL: This line tells axios to include the token in EVERY future request
+    this.client.defaults.headers.common['Authorization'] = `Bearer ${token}`;
   }
 
   clearToken() {
@@ -163,6 +171,12 @@ class ApiClient {
 
   async getDiagnoses(patientId: string) {
     const response = await this.client.get(`/diagnosis/${patientId}`);
+    return response.data;
+  }
+
+  // Disease Library
+  async getDiseases() {
+    const response = await this.client.get("/diagnosis/library");
     return response.data;
   }
 }

@@ -9,7 +9,24 @@ export const LoginSchema = z.object({
 export const RegisterSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8).regex(/[A-Z]/).regex(/[0-9]/),
-  specialty: z.string(),
+  specialty: z.enum([
+    "General Medicine",
+    "Pediatrics",
+    "Obstetrics & Gynaecology",
+    "Surgery",
+    "Cardiology",
+    "Pulmonology",
+    "Gastroenterology",
+    "Nephrology",
+    "Neurology",
+    "Psychiatry",
+    "Dermatology",
+    "Orthopedics",
+    "Endocrinology",
+    "Infectious Diseases",
+    "ENT",
+    "Ophthalmology",
+  ]),
 });
 
 // Patient Schemas
@@ -25,6 +42,24 @@ export const PatientCreateSchema = z.object({
   durationOfIllness: z.string().optional(),
   systemicReview: z.string().optional(),
   examFindings: z.string().optional(),
+  specialty: z.enum([
+    "General Medicine",
+    "Pediatrics",
+    "Obstetrics & Gynaecology",
+    "Surgery",
+    "Cardiology",
+    "Pulmonology",
+    "Gastroenterology",
+    "Nephrology",
+    "Neurology",
+    "Psychiatry",
+    "Dermatology",
+    "Orthopedics",
+    "Endocrinology",
+    "Infectious Diseases",
+    "ENT",
+    "Ophthalmology",
+  ]),
 });
 
 export const PatientUpdateSchema = PatientCreateSchema.partial();
