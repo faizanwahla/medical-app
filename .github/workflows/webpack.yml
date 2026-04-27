@@ -1,4 +1,4 @@
-name: NodeJS with Webpack
+name: NodeJS with Vite Build
 
 on:
   push:
@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [18.x, 20.x, 22.x]
+        node-version: [20.x] # Vite works best on modern Node versions
 
     steps:
     - uses: actions/checkout@v4
@@ -29,11 +29,11 @@ jobs:
         cache: 'pnpm'
 
     - name: Install dependencies
-      # We run install from the root so pnpm can link the 'shared' and 'web' packages
       run: pnpm install
 
     - name: Build Web Package
       working-directory: ./packages/web
       run: |
-        # Use pnpm exec instead of npx for workspace compatibility
-        pnpm exec webpack --mode production
+        # Vite projects usually use 'npm run build' or 'pnpm build'
+        # which points to 'vite build' inside package.json
+        pnpm run build
