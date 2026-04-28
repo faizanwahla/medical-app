@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../index";
 import { diseasePlaybooks } from "./disease-playbooks";
 
@@ -189,17 +190,125 @@ const diseases = [
     reference: "Respiratory Medicine Guidelines",
     vitalSigns: { rr: { normal: "12-20", elevated: ">20" }, o2: { normal: ">95", low: "<90" }, hr: { elevated: ">100" } },
     clinicalPlaybook: diseasePlaybooks["J93.9"],
-  }
+  },
+  {
+    name: "Chronic Obstructive Pulmonary Disease",
+    icdCode: "J44.9",
+    specialty: "Respiratory Medicine",
+    definition: "Chronic progressive airflow limitation usually linked to smoking or pollutant exposure",
+    pathophysiology: "Persistent airway inflammation and parenchymal destruction reduce expiratory airflow and gas exchange",
+    epidemiology: "Common in older adults with smoking or biomass exposure history",
+    symptoms: ["Cough", "Sputum", "Shortness of breath", "Wheezing"],
+    signs: ["Tachypnea", "Wheezing", "Decreased breath sounds"],
+    diagnosticCriteria: ["Post-bronchodilator airflow limitation", "Compatible chronic respiratory symptoms"],
+    investigations: ["Spirometry", "Chest X-ray", "CBC"],
+    management: "Smoking cessation, bronchodilators, exacerbation treatment, pulmonary rehabilitation",
+    prognosis: "Chronic progressive disease with better outcomes when exacerbations and smoking are controlled",
+    reference: "GOLD Guidelines",
+    vitalSigns: { rr: { normal: "12-20", elevated: ">22" }, o2: { normal: ">92", low: "<90" }, hr: { normal: "60-100", elevated: ">100" } },
+    clinicalPlaybook: diseasePlaybooks["J44.9"],
+  },
+  {
+    name: "Acute Ischemic Stroke",
+    icdCode: "I63.9",
+    specialty: "Neurology",
+    definition: "Sudden neurologic deficit caused by focal cerebral ischemia and infarction",
+    pathophysiology: "Arterial occlusion interrupts cerebral perfusion leading to ischemic neuronal injury",
+    epidemiology: "Major cause of mortality and long-term disability worldwide",
+    symptoms: ["Weakness", "Confusion", "Visual Changes", "Dizziness"],
+    signs: ["Facial droop", "Limb weakness", "Speech disturbance"],
+    diagnosticCriteria: ["Acute focal neurologic deficit", "Imaging supporting ischemia"],
+    investigations: ["CT brain", "ECG", "Blood glucose"],
+    management: "Urgent stroke pathway, imaging, antiplatelet strategy, secondary prevention, rehabilitation",
+    prognosis: "Time-sensitive with outcome shaped by infarct size, reperfusion, and complications",
+    reference: "AHA/ASA Stroke Guidelines",
+    vitalSigns: { bp: { elevated: ">180/105" }, o2: { normal: ">94", low: "<92" }, glucose: { elevated: ">180" } },
+    clinicalPlaybook: diseasePlaybooks["I63.9"],
+  },
+  {
+    name: "Migraine",
+    icdCode: "G43.9",
+    specialty: "Neurology",
+    definition: "Primary episodic headache disorder often associated with nausea, photophobia, and disability",
+    pathophysiology: "Trigeminovascular activation and central sensory modulation drive recurrent attacks",
+    epidemiology: "Common in young and middle-aged adults, with higher prevalence in women",
+    symptoms: ["Headache", "Nausea", "Visual Changes", "Vomiting"],
+    signs: ["Photophobia", "Normal focal neurologic exam"],
+    diagnosticCriteria: ["Recurrent headache attacks with typical migraine features"],
+    investigations: ["Neurologic examination", "CT brain if red flags"],
+    management: "Abortive therapy, trigger control, hydration, and follow-up for frequent attacks",
+    prognosis: "Usually good with trigger identification and effective acute treatment",
+    reference: "ICHD-3",
+    vitalSigns: { hr: { normal: "60-100", elevated: ">100" } },
+    clinicalPlaybook: diseasePlaybooks["G43.9"],
+  },
+  {
+    name: "Atopic Dermatitis",
+    icdCode: "L20.9",
+    specialty: "Dermatology",
+    definition: "Chronic relapsing pruritic inflammatory skin disorder associated with barrier dysfunction",
+    pathophysiology: "Skin barrier disruption and immune dysregulation lead to xerosis and eczema flares",
+    epidemiology: "Common in children but persists or relapses in adults",
+    symptoms: ["Itching", "Rash", "Dry skin"],
+    signs: ["Excoriations", "Erythematous patches", "Lichenification"],
+    diagnosticCriteria: ["Chronic itchy dermatitis with typical distribution"],
+    investigations: ["Skin examination"],
+    management: "Emollients, trigger avoidance, topical anti-inflammatory therapy, infection control when needed",
+    prognosis: "Often chronic-relapsing but manageable with regular skin care",
+    reference: "Dermatology Practice Guidelines",
+    vitalSigns: {},
+    clinicalPlaybook: diseasePlaybooks["L20.9"],
+  },
+  {
+    name: "Gastroesophageal Reflux Disease",
+    icdCode: "K21.9",
+    specialty: "Gastroenterology",
+    definition: "Reflux of gastric contents causing troublesome symptoms and possible esophageal injury",
+    pathophysiology: "Lower esophageal sphincter dysfunction allows acid exposure to the esophageal mucosa",
+    epidemiology: "Very common in adults and associated with obesity and dietary triggers",
+    symptoms: ["Heartburn", "Chest Pain", "Nausea"],
+    signs: ["Often no specific physical findings"],
+    diagnosticCriteria: ["Typical reflux symptoms with response to acid suppression or endoscopic evidence"],
+    investigations: ["Upper GI endoscopy", "Full blood count"],
+    management: "Lifestyle measures, proton pump inhibitor therapy, and alarm-symptom assessment",
+    prognosis: "Good in uncomplicated disease when lifestyle factors and acid suppression are addressed",
+    reference: "NICE Dyspepsia and GERD Guidance",
+    vitalSigns: {},
+    clinicalPlaybook: diseasePlaybooks["K21.9"],
+  },
+  {
+    name: "Iron Deficiency Anemia",
+    icdCode: "D50.9",
+    specialty: "General Medicine",
+    definition: "Anemia caused by insufficient iron for normal hemoglobin synthesis",
+    pathophysiology: "Iron depletion from blood loss, poor intake, or malabsorption causes microcytic hypochromic anemia",
+    epidemiology: "Common worldwide, especially in menstruating adults, pregnancy, and chronic blood loss states",
+    symptoms: ["Fatigue", "Dizziness", "Shortness of breath", "Weakness"],
+    signs: ["Pallor", "Tachycardia"],
+    diagnosticCriteria: ["Low hemoglobin with iron deficiency studies"],
+    investigations: ["Full blood count", "Ferritin", "Stool occult blood"],
+    management: "Iron replacement and evaluation of the underlying cause of deficiency",
+    prognosis: "Usually good when the cause is identified and stores are replenished",
+    reference: "WHO Anemia Guidance",
+    vitalSigns: { hr: { normal: "60-100", elevated: ">100" } },
+    clinicalPlaybook: diseasePlaybooks["D50.9"],
+  },
 ];
 
 async function seedDiseases() {
   console.log("🌱 Seeding disease database...");
 
   for (const disease of diseases) {
+    const payload = {
+      ...disease,
+      vitalSigns: disease.vitalSigns as Prisma.InputJsonValue,
+      clinicalPlaybook: disease.clinicalPlaybook as unknown as Prisma.InputJsonValue,
+    };
+
     await prisma.disease.upsert({
       where: { icdCode: disease.icdCode },
-      update: disease,
-      create: disease,
+      update: payload,
+      create: payload,
     });
   }
 

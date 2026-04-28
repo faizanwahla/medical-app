@@ -2,7 +2,9 @@
 
 .app {
   min-height: 100vh;
-  background-color: #f3f4f6;
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.04) 0%, rgba(15, 23, 42, 0) 20%),
+    linear-gradient(135deg, #f4f7f7 0%, #edf5f4 45%, #f7faf9 100%);
 }
 
 /* Dashboard */
@@ -65,9 +67,9 @@
 .loading-skeleton {
   background: linear-gradient(
     90deg,
-    #f0f0f0 0%,
-    #e0e0e0 50%,
-    #f0f0f0 100%
+    #eef2f6 0%,
+    #e2e8f0 50%,
+    #eef2f6 100%
   );
   background-size: 200% 100%;
   animation: loading 1.5s infinite;

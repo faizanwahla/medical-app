@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { prisma } from "../../index";
+import { prisma } from "../../lib/prisma.js";
 import { authMiddleware, AuthRequest } from "../../middleware/auth";
 import { handleError, NotFoundError } from "../../lib/errors";
 

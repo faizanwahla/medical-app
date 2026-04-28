@@ -58,38 +58,40 @@ export default function VitalsForm({ patientId, onClose }: VitalsFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-2 gap-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-3">
         <VitalInput 
-          label="Temperature (°C)" 
+          label="Temperature" 
           name="temperature" 
           value={vitals.temperature} 
           onChange={handleChange} 
-          icon={<Thermometer className="w-4 h-4 text-red-500" />} 
+          icon={<Thermometer className="w-3.5 h-3.5 text-rose-500" />} 
           placeholder="36.5"
+          suffix="°C"
         />
         <VitalInput 
-          label="Pulse (bpm)" 
+          label="Pulse" 
           name="pulse" 
           value={vitals.pulse} 
           onChange={handleChange} 
-          icon={<Heart className="w-4 h-4 text-rose-500" />} 
+          icon={<Heart className="w-3.5 h-3.5 text-rose-600" />} 
           placeholder="72"
+          suffix="bpm"
         />
         <VitalInput 
-          label="BP Systolic" 
+          label="BP (Systolic)" 
           name="bloodPressureSystolic" 
           value={vitals.bloodPressureSystolic} 
           onChange={handleChange} 
-          icon={<Activity className="w-4 h-4 text-blue-500" />} 
+          icon={<Activity className="w-3.5 h-3.5 text-sky-500" />} 
           placeholder="120"
         />
         <VitalInput 
-          label="BP Diastolic" 
+          label="BP (Diastolic)" 
           name="bloodPressureDiastolic" 
           value={vitals.bloodPressureDiastolic} 
           onChange={handleChange} 
-          icon={<Activity className="w-4 h-4 text-blue-400" />} 
+          icon={<Activity className="w-3.5 h-3.5 text-sky-400" />} 
           placeholder="80"
         />
         <VitalInput 
@@ -97,52 +99,54 @@ export default function VitalsForm({ patientId, onClose }: VitalsFormProps) {
           name="respiratoryRate" 
           value={vitals.respiratoryRate} 
           onChange={handleChange} 
-          icon={<Activity className="w-4 h-4 text-green-500" />} 
+          icon={<Activity className="w-3.5 h-3.5 text-emerald-500" />} 
           placeholder="16"
+          suffix="/min"
         />
         <VitalInput 
-          label="SpO2 (%)" 
+          label="Oxygen Sat." 
           name="oxygenSaturation" 
           value={vitals.oxygenSaturation} 
           onChange={handleChange} 
-          icon={<Droplets className="w-4 h-4 text-cyan-500" />} 
+          icon={<Droplets className="w-3.5 h-3.5 text-cyan-500" />} 
           placeholder="98"
+          suffix="%"
         />
       </div>
 
-      <div>
-        <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Notes</label>
+      <div className="space-y-1.5">
+        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Clinical Notes</label>
         <textarea
           name="notes"
-          className="input-field w-full"
+          className="input-modern py-2 min-h-[60px]"
           rows={2}
           value={vitals.notes}
           onChange={handleChange}
-          placeholder="Optional notes..."
+          placeholder="Observation details..."
         />
       </div>
 
       {mutation.isError && (
-        <div className="p-3 bg-red-50 text-red-700 rounded-lg flex items-center space-x-2 text-sm">
-          <AlertCircle className="w-4 h-4" />
-          <span>Error recording vitals.</span>
+        <div className="p-2 bg-rose-50 text-rose-700 rounded-lg flex items-center gap-2 text-[10px] font-bold border border-rose-100">
+          <AlertCircle className="w-3.5 h-3.5" />
+          <span>Error recording data.</span>
         </div>
       )}
 
-      <div className="flex gap-3 pt-2">
-        <button type="button" onClick={onClose} className="flex-1 btn-secondary">Cancel</button>
+      <div className="flex gap-2 pt-2">
+        <button type="button" onClick={onClose} className="flex-1 btn-secondary-glass h-10 text-[11px]">Cancel</button>
         <button 
           type="submit" 
-          className="flex-[2] btn-primary flex items-center justify-center space-x-2"
+          className="flex-[2] btn-primary-gradient h-10 text-[11px]"
           disabled={mutation.isPending}
         >
           {mutation.isPending ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
+            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
           ) : (
-            <>
-              <Plus className="w-5 h-5" />
-              <span>Record Vitals</span>
-            </>
+            <div className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              <span>Record Snapshot</span>
+            </div>
           )}
         </button>
       </div>
@@ -150,22 +154,29 @@ export default function VitalsForm({ patientId, onClose }: VitalsFormProps) {
   );
 }
 
-function VitalInput({ label, name, value, onChange, icon, placeholder }: any) {
+function VitalInput({ label, name, value, onChange, icon, placeholder, suffix }: any) {
   return (
-    <div>
-      <label className="flex items-center space-x-1 text-xs font-bold text-gray-600 uppercase mb-1">
+    <div className="space-y-1">
+      <label className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">
         {icon}
         <span>{label}</span>
       </label>
-      <input
-        type="number"
-        step="any"
-        name={name}
-        className="input-field w-full"
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-      />
+      <div className="relative group">
+        <input
+          type="number"
+          step="any"
+          name={name}
+          className="input-modern pr-10 h-9"
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+        />
+        {suffix && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-300 pointer-events-none group-focus-within:text-sky-400 transition-colors">
+            {suffix}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

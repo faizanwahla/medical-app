@@ -12,7 +12,7 @@ export function parseClinicalPlaybook(
     return null;
   }
 
-  return value as DiseaseClinicalPlaybook;
+  return value as unknown as DiseaseClinicalPlaybook;
 }
 
 function attachFormularyLinks(

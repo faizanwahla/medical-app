@@ -1,5 +1,5 @@
 import { Router, Response } from "express";
-import { prisma } from "../../index";
+import { prisma } from "../../lib/prisma.js";
 import { PatientCreateSchema, PatientUpdateSchema } from "@medical-app/shared";
 import { authMiddleware, AuthRequest, roleCheck } from "../../middleware/auth";
 import { handleError, NotFoundError, ValidationError } from "../../lib/errors";
@@ -27,7 +27,10 @@ router.get("/", async (req: AuthRequest, res: Response) => {
         orderBy: { createdAt: "desc" },
         include: {
           vitals: { take: 1, orderBy: { recordedAt: "desc" } },
-          treatments: { where: { status: "Active" } },
+          treatments: {
+            where: { status: "Active" },
+            include: { medicine: true },
+          },
         },
       }),
       prisma.patient.count({ where: { userId: req.user.userId } }),
@@ -59,7 +62,9 @@ router.get("/:id", async (req: AuthRequest, res: Response) => {
         vitals: { orderBy: { recordedAt: "desc" }, take: 10 },
         differentialDiagnoses: { orderBy: { createdAt: "desc" } },
         investigations: { orderBy: { requestedAt: "desc" } },
-        treatments: true,
+        treatments: {
+          include: { medicine: true },
+        },
       },
     });
 

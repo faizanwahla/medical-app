@@ -72,42 +72,44 @@ export default function SymptomSelector({ selectedSymptoms, onChange }: SymptomS
   const currentSystem = systems.find(s => s.id === activeSystem)!;
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-      <div className="flex border-b border-gray-50 bg-gray-50/30">
+    <div className="bg-white rounded-xl border border-slate-200/60 overflow-hidden shadow-sm">
+      <div className="flex border-b border-slate-100 bg-slate-50/50">
         {systems.map((system) => {
           const Icon = system.icon;
           const isActive = activeSystem === system.id;
           return (
             <button
+              type="button"
               key={system.id}
               onClick={() => setActiveSystem(system.id)}
-              className={`flex-1 flex flex-col items-center py-4 transition-all ${
-                isActive ? 'bg-white border-b-2 border-medical-600 text-medical-700' : 'text-gray-400 hover:text-gray-600'
+              className={`flex-1 flex flex-col items-center py-2 transition-all border-b-2 ${
+                isActive ? 'bg-white border-sky-500 text-sky-700' : 'border-transparent text-slate-400 hover:text-slate-600'
               }`}
             >
-              <Icon className={`w-5 h-5 mb-1 ${isActive ? 'text-medical-600' : ''}`} />
-              <span className="text-[10px] font-black uppercase tracking-wider">{system.label}</span>
+              <Icon className={`w-3.5 h-3.5 mb-1 ${isActive ? 'text-sky-500' : ''}`} />
+              <span className="text-[8px] font-black uppercase tracking-wider">{system.label}</span>
             </button>
           );
         })}
       </div>
 
-      <div className="p-6">
-        <div className="grid grid-cols-2 gap-3">
+      <div className="p-4">
+        <div className="grid grid-cols-2 gap-2">
           {currentSystem.symptoms.map((symptom) => {
             const isSelected = selectedSymptoms.includes(symptom);
             return (
               <button
+                type="button"
                 key={symptom}
                 onClick={() => toggleSymptom(symptom)}
-                className={`flex items-center justify-between px-4 py-3 rounded-xl border transition-all text-sm font-medium ${
+                className={`flex items-center justify-between px-3 py-2 rounded-lg border transition-all text-[11px] font-bold ${
                   isSelected 
-                    ? 'bg-medical-50 border-medical-200 text-medical-800 ring-2 ring-medical-500/10' 
-                    : 'bg-white border-gray-100 text-gray-600 hover:border-gray-300'
+                    ? 'bg-sky-50 border-sky-200 text-sky-800 ring-2 ring-sky-500/5' 
+                    : 'bg-white border-slate-100 text-slate-600 hover:border-slate-300'
                 }`}
               >
                 <span>{symptom}</span>
-                {isSelected && <Check className="w-4 h-4 text-medical-600" />}
+                {isSelected && <Check className="w-3.5 h-3.5 text-sky-600" />}
               </button>
             );
           })}
@@ -115,12 +117,12 @@ export default function SymptomSelector({ selectedSymptoms, onChange }: SymptomS
       </div>
 
       {selectedSymptoms.length > 0 && (
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
-          <div className="flex flex-wrap gap-2">
+        <div className="px-4 py-2 bg-slate-50 border-t border-slate-100">
+          <div className="flex flex-wrap gap-1.5">
             {selectedSymptoms.map(s => (
-              <span key={s} className="px-3 py-1 bg-medical-600 text-white text-[10px] font-bold rounded-full uppercase flex items-center">
+              <span key={s} className="badge-info flex items-center gap-1.5 py-0.5">
                 {s}
-                <button onClick={() => toggleSymptom(s)} className="ml-2 hover:text-red-200">×</button>
+                <button type="button" onClick={() => toggleSymptom(s)} className="hover:text-rose-500 font-black">×</button>
               </span>
             ))}
           </div>

@@ -88,14 +88,26 @@ export const InvestigationCreateSchema = z.object({
 });
 
 // Treatment Schemas
-export const TreatmentCreateSchema = z.object({
-  medicineId: z.string(),
-  dosage: z.string().min(1),
-  frequency: z.string().min(1),
-  duration: z.string().min(1),
-  instructions: z.string().optional(),
-  startedAt: z.coerce.date().optional(),
-});
+export const TreatmentCreateSchema = z
+  .object({
+    medicineId: z.string().optional(),
+    medicineName: z.string().trim().optional(),
+    medicineType: z.string().trim().optional(),
+    dosage: z.string().min(1),
+    frequency: z.string().min(1),
+    duration: z.string().min(1),
+    instructions: z.string().optional(),
+    startedAt: z.coerce.date().optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (!value.medicineId && !value.medicineName) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["medicineName"],
+        message: "Select a formulary medicine or enter a medicine name",
+      });
+    }
+  });
 
 // Note Schemas
 export const ClinicalNoteCreateSchema = z.object({

@@ -1,5 +1,5 @@
 import { Router, Response } from "express";
-import { prisma } from "../../index";
+import { prisma } from "../../lib/prisma.js";
 import { TreatmentCreateSchema } from "@medical-app/shared";
 import { authMiddleware, AuthRequest, roleCheck } from "../../middleware/auth";
 import { handleError, NotFoundError } from "../../lib/errors";
@@ -76,22 +76,51 @@ router.post("/patient/:patientId", roleCheck(["ADMIN", "PHYSICIAN"]), async (req
     }
 
     const input = TreatmentCreateSchema.parse(req.body);
+    const trimmedMedicineName = input.medicineName?.trim();
+    const trimmedMedicineType = input.medicineType?.trim();
+    let medicine = input.medicineId
+      ? await prisma.medicine.findUnique({
+          where: { id: input.medicineId },
+        })
+      : null;
 
-    // Verify medicine exists
-    const medicine = await prisma.medicine.findUnique({
-      where: { id: input.medicineId },
-    });
+    if (!medicine && trimmedMedicineName) {
+      medicine = await prisma.medicine.findFirst({
+        where: {
+          name: {
+            equals: trimmedMedicineName,
+            mode: "insensitive",
+          },
+        },
+      });
+    }
+
+    if (!medicine && trimmedMedicineName) {
+      medicine = await prisma.medicine.create({
+        data: {
+          name: trimmedMedicineName,
+          type: trimmedMedicineType || "Custom prescription",
+          uses: [],
+          dosage: input.dosage,
+          sideEffects: [],
+          contraindications: [],
+        },
+      });
+    }
 
     if (!medicine) {
       throw new NotFoundError("Medicine");
     }
 
+    const { medicineId: _medicineId, medicineName: _medicineName, medicineType: _medicineType, ...treatmentInput } = input;
+
     const treatment = await prisma.treatment.create({
       data: {
         patientId: req.params.patientId,
-        ...input,
+        ...treatmentInput,
+        medicineId: medicine.id,
         status: "Active",
-        startedAt: input.startedAt || new Date(),
+        startedAt: treatmentInput.startedAt || new Date(),
       },
       include: { medicine: true },
     });

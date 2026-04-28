@@ -1,5 +1,5 @@
 import { Router, Response } from "express";
-import { prisma } from "../../index";
+import { prisma } from "../../lib/prisma.js";
 import { VitalCreateSchema } from "@medical-app/shared";
 import { authMiddleware, AuthRequest } from "../../middleware/auth";
 import { handleError, NotFoundError } from "../../lib/errors";

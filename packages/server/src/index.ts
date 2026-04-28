@@ -21,8 +21,7 @@ import signsRoutes from "./modules/signs/routes.js";
 // Load environment variables
 dotenv.config();
 
-// Initialize Prisma
-export const prisma = new PrismaClient();
+export { prisma } from "./lib/prisma.js";
 
 // Create Express app
 const app = express();

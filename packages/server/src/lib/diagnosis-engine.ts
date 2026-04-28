@@ -8,6 +8,8 @@ export interface DDxRequest {
   age: number;
   specialty: string;
   riskFactors?: string[];
+  clinicalNarrative?: string[];
+  investigationFindings?: string[];
   latestVital?: Partial<
     Pick<
       Vital,
@@ -17,8 +19,57 @@ export interface DDxRequest {
       | "bloodPressureSystolic"
       | "bloodPressureDiastolic"
       | "oxygenSaturation"
+      | "bloodGlucose"
     >
   > | null;
+}
+
+function normalizeText(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function extractTokens(value: string): string[] {
+  return normalizeText(value)
+    .split(" ")
+    .filter((token) => token.length >= 4);
+}
+
+function hasClinicalMatch(left: string, right: string): boolean {
+  const normalizedLeft = normalizeText(left);
+  const normalizedRight = normalizeText(right);
+
+  if (!normalizedLeft || !normalizedRight) {
+    return false;
+  }
+
+  if (
+    normalizedLeft === normalizedRight ||
+    normalizedLeft.includes(normalizedRight) ||
+    normalizedRight.includes(normalizedLeft)
+  ) {
+    return true;
+  }
+
+  const leftTokens = extractTokens(normalizedLeft);
+  const rightTokens = extractTokens(normalizedRight);
+
+  return leftTokens.some((leftToken) =>
+    rightTokens.some((rightToken) => {
+      const leftStem = leftToken.slice(0, Math.min(leftToken.length, 5));
+      const rightStem = rightToken.slice(0, Math.min(rightToken.length, 5));
+      return leftStem === rightStem;
+    })
+  );
+}
+
+function countMatches(needles: string[], haystack: string[]): number {
+  return needles.filter((needle) =>
+    haystack.some((candidate) => hasClinicalMatch(candidate, needle))
+  ).length;
 }
 
 /**
@@ -28,7 +79,16 @@ export interface DDxRequest {
 export async function generateDifferentialDiagnosis(
   request: DDxRequest
 ): Promise<DDxSuggestion[]> {
-  const { symptoms, signs, age, specialty, riskFactors = [], latestVital } = request;
+  const {
+    symptoms,
+    signs,
+    age,
+    specialty,
+    riskFactors = [],
+    clinicalNarrative = [],
+    investigationFindings = [],
+    latestVital,
+  } = request;
 
   if (!symptoms.length && !signs.length) {
     return [];
@@ -42,19 +102,24 @@ export async function generateDifferentialDiagnosis(
     .map((disease) => {
       let score = 0;
       const playbook = parseClinicalPlaybook(disease.clinicalPlaybook);
+      const diseaseContext = [
+        disease.definition,
+        disease.pathophysiology,
+        disease.epidemiology,
+        disease.management,
+        ...disease.diagnosticCriteria,
+        ...disease.investigations,
+        ...(playbook?.differentialClues || []),
+        ...(playbook?.redFlags || []),
+        ...(playbook?.complications || []),
+      ];
 
       // Match symptoms
-      const matchedSymptoms = symptoms.filter((symptom) =>
-        disease.symptoms.some((s) =>
-          s.toLowerCase().includes(symptom.toLowerCase())
-        )
-      ).length;
+      const matchedSymptoms = countMatches(symptoms, disease.symptoms);
       score += matchedSymptoms * 30;
 
       // Match signs
-      const matchedSigns = signs.filter((sign) =>
-        disease.signs.some((s) => s.toLowerCase().includes(sign.toLowerCase()))
-      ).length;
+      const matchedSigns = countMatches(signs, disease.signs);
       score += matchedSigns * 25;
 
       // Specialty alignment bonus
@@ -64,20 +129,21 @@ export async function generateDifferentialDiagnosis(
 
       // Pathophysiology & Epidemiology Keyword Matching
       const clinicalContext = [...symptoms, ...signs, ...riskFactors];
-      let contextMatches = 0;
-      clinicalContext.forEach(term => {
-        if (disease.pathophysiology.toLowerCase().includes(term.toLowerCase())) contextMatches++;
-        if (disease.epidemiology.toLowerCase().includes(term.toLowerCase())) contextMatches++;
-      });
+      const contextMatches = countMatches(clinicalContext, diseaseContext);
       score += contextMatches * 10;
 
       const matchedRiskFactors =
-        playbook?.riskFactors.filter((factor) =>
-          riskFactors.some((riskFactor) =>
-            factor.toLowerCase().includes(riskFactor.toLowerCase())
-          )
-        ).length || 0;
+        countMatches(riskFactors, playbook?.riskFactors || []);
       score += matchedRiskFactors * 12;
+
+      const matchedNarrative = countMatches(clinicalNarrative, diseaseContext);
+      score += matchedNarrative * 8;
+
+      const matchedInvestigationFindings = countMatches(
+        investigationFindings,
+        [...disease.diagnosticCriteria, ...disease.investigations, ...(playbook?.differentialClues || [])]
+      );
+      score += matchedInvestigationFindings * 18;
 
       let vitalPatternMatches = 0;
       if (playbook?.vitalPatterns && latestVital) {
@@ -110,6 +176,8 @@ export async function generateDifferentialDiagnosis(
         matchedSigns,
         contextMatches,
         matchedRiskFactors,
+        matchedNarrative,
+        matchedInvestigationFindings,
         vitalPatternMatches,
       };
     })
@@ -123,6 +191,9 @@ export async function generateDifferentialDiagnosis(
     (signs.length * 25) + 
     20 + // specialty bonus
     ((symptoms.length + signs.length + riskFactors.length) * 10) + // context
+    (riskFactors.length * 12) +
+    (clinicalNarrative.length * 8) +
+    (investigationFindings.length * 18) +
     10; // age
 
   // Format results with calibrated probability
@@ -143,14 +214,19 @@ export async function generateDifferentialDiagnosis(
 }
 
 function generateReasoning(item: any, userSpecialty: string): string {
-  const parts = [];
+  const parts: string[] = [];
   if (item.matchedSymptoms > 0) parts.push(`${item.matchedSymptoms} key symptoms`);
   if (item.matchedSigns > 0) parts.push(`${item.matchedSigns} clinical signs`);
-  if (item.contextMatches > 0) parts.push("pathophysiological alignment");
+  if (item.contextMatches > 0) parts.push("chart-context alignment");
   if (item.matchedRiskFactors > 0) parts.push(`${item.matchedRiskFactors} risk factor matches`);
+  if (item.matchedNarrative > 0) parts.push(`${item.matchedNarrative} narrative chart matches`);
+  if (item.matchedInvestigationFindings > 0) parts.push(`${item.matchedInvestigationFindings} investigation correlations`);
   if (item.vitalPatternMatches > 0) parts.push(`${item.vitalPatternMatches} vital sign correlations`);
-  
-  let reasoning = `Analysis reveals ${parts.join(", ")} consistent with ${item.disease.name}. `;
+
+  const evidenceSummary = parts.length
+    ? parts.join(", ")
+    : "overall specialty and demographic alignment";
+  let reasoning = `Analysis reveals ${evidenceSummary} consistent with ${item.disease.name}. `;
   
   if (item.disease.specialty.toLowerCase() === userSpecialty.toLowerCase()) {
     reasoning += `This matches your primary specialty context. `;

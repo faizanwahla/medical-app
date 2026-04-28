@@ -49,6 +49,9 @@ export interface Vital {
   bloodPressureSystolic?: number;
   bloodPressureDiastolic?: number;
   oxygenSaturation?: number;
+  bloodGlucose?: number;
+  weight?: number;
+  height?: number;
   recordedAt: Date;
   notes?: string;
 }

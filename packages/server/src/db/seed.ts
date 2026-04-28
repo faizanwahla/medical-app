@@ -52,6 +52,8 @@ async function main() {
     { name: "Nitrofurantoin", type: "Urinary antibiotic", uses: ["Uncomplicated urinary tract infection"], dosage: "100mg BID for 5 days", sideEffects: ["nausea", "dark urine"], contraindications: ["significant renal impairment"] },
     { name: "Ondansetron", type: "Antiemetic", uses: ["Nausea", "Vomiting"], dosage: "4-8mg every 8 hours as needed", sideEffects: ["constipation", "QT prolongation"], contraindications: ["congenital long QT syndrome"] },
     { name: "Insulin (Human)", type: "Insulin", uses: ["Type 1 diabetes", "Type 2 diabetes"], dosage: "As per sliding scale", sideEffects: ["hypoglycemia", "weight gain"], contraindications: [] },
+    { name: "Omeprazole", type: "Proton pump inhibitor", uses: ["GERD", "Peptic ulcer disease"], dosage: "20-40mg once daily", sideEffects: ["headache", "abdominal discomfort"], contraindications: ["hypersensitivity"] },
+    { name: "Ferrous Sulfate", type: "Iron supplement", uses: ["Iron deficiency anemia"], dosage: "200mg once to three times daily", sideEffects: ["constipation", "dark stools"], contraindications: ["iron overload states"] },
   ];
 
   for (const m of medicines) {

@@ -13,6 +13,10 @@ import {
   Stethoscope,
   Thermometer,
   Droplets,
+  ChevronRight,
+  ShieldCheck,
+  BookOpen,
+  Clock,
 } from "lucide-react";
 import { Disease, DiseaseInvestigationRecommendation, DiseaseTreatmentRecommendation } from "@medical-app/shared";
 import DDxGenerator from "../../components/DDxGenerator";
@@ -37,6 +41,8 @@ export default function PatientDetailPage({ patientId, onBack }: PatientDetailPa
   const [isInvestigationModalOpen, setIsInvestigationModalOpen] = useState(false);
   const [isVitalsModalOpen, setIsVitalsModalOpen] = useState(false);
   const [selectedDiagnosisName, setSelectedDiagnosisName] = useState<string | null>(null);
+  const [pendingTreatmentRecommendation, setPendingTreatmentRecommendation] =
+    useState<DiseaseTreatmentRecommendation | null>(null);
   const [workflowMessage, setWorkflowMessage] = useState<string | null>(null);
   const {
     feverThreshold,
@@ -83,30 +89,6 @@ export default function PatientDetailPage({ patientId, onBack }: PatientDetailPa
     },
   });
 
-  const startTreatmentMutation = useMutation({
-    mutationFn: (recommendation: DiseaseTreatmentRecommendation) => {
-      if (!recommendation.medicineId) {
-        throw new Error(`${recommendation.medicineName} is not linked to the current formulary.`);
-      }
-
-      return apiClient.addTreatment(patientId, {
-        medicineId: recommendation.medicineId,
-        dosage: recommendation.dose,
-        frequency: recommendation.frequency,
-        duration: recommendation.duration,
-        instructions: recommendation.instructions,
-        startedAt: new Date().toISOString(),
-      });
-    },
-    onSuccess: (_, recommendation) => {
-      queryClient.invalidateQueries({ queryKey: ["patient", patientId] });
-      setWorkflowMessage(`Started ${recommendation.medicineName}.`);
-    },
-    onError: (error: Error) => {
-      setWorkflowMessage(error.message);
-    },
-  });
-
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-96 space-y-4">
@@ -140,6 +122,10 @@ export default function PatientDetailPage({ patientId, onBack }: PatientDetailPa
   const existingTreatmentMedicineIds = (patient.treatments || [])
     .filter((treatment: { status: string }) => treatment.status === "Active")
     .map((treatment: { medicineId: string }) => treatment.medicineId);
+  const existingTreatmentNames = (patient.treatments || [])
+    .filter((treatment: { status: string }) => treatment.status === "Active")
+    .map((treatment: { medicine?: { name?: string | null } }) => treatment.medicine?.name)
+    .filter(Boolean) as string[];
 
   const handleOrderInvestigation = async (
     recommendation: DiseaseInvestigationRecommendation
@@ -205,102 +191,102 @@ export default function PatientDetailPage({ patientId, onBack }: PatientDetailPa
     );
   };
 
-  const handleStartTreatment = async (
+  const handleStartTreatment = (
     recommendation: DiseaseTreatmentRecommendation
   ) => {
-    if (!recommendation.medicineId) {
-      setWorkflowMessage(
-        `${recommendation.medicineName} is not linked to the current formulary.`
+    const alreadyActive =
+      (!!recommendation.medicineId &&
+        existingTreatmentMedicineIds.includes(recommendation.medicineId)) ||
+      existingTreatmentNames.some(
+        (name) => name.toLowerCase() === recommendation.medicineName.toLowerCase()
       );
-      return;
-    }
-
-    const alreadyActive = existingTreatmentMedicineIds.includes(
-      recommendation.medicineId
-    );
     if (alreadyActive) {
       setWorkflowMessage(`${recommendation.medicineName} is already active.`);
       return;
     }
+    setPendingTreatmentRecommendation(recommendation);
+    setIsTreatmentModalOpen(true);
+  };
 
-    if (
-      confirmBeforeCarePlanOrders &&
-      !window.confirm(
-        `Start ${recommendation.medicineName} (${recommendation.dose}, ${recommendation.frequency})?`
-      )
-    ) {
-      return;
-    }
+  const handleOpenBlankTreatmentForm = () => {
+    setPendingTreatmentRecommendation(null);
+    setIsTreatmentModalOpen(true);
+  };
 
-    await startTreatmentMutation.mutateAsync(recommendation);
+  const handleCloseTreatmentModal = () => {
+    setIsTreatmentModalOpen(false);
+    setPendingTreatmentRecommendation(null);
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-fade-in pb-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-center space-x-6">
+    <div className="max-w-7xl mx-auto space-y-6 animate-fade-in pb-10 px-4 sm:px-6">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center space-x-4">
           <button
             onClick={onBack}
-            className="p-3 bg-white hover:bg-gray-100 rounded-2xl shadow-sm border border-gray-100 transition-all"
+            className="p-2.5 bg-white hover:bg-slate-50 rounded-xl border border-slate-200 transition-all shadow-sm group"
           >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
+            <ArrowLeft className="w-4 h-4 text-slate-500 group-hover:text-slate-900" />
           </button>
           <div className="flex items-center space-x-4">
-            <div className="w-16 h-16 rounded-2xl bg-medical-600 text-white flex items-center justify-center font-black text-2xl shadow-xl shadow-medical-200">
+            <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-bold text-lg shadow-xl shadow-slate-900/10">
               {(patient.firstName?.[0] || "")}
               {(patient.lastName?.[0] || "")}
             </div>
             <div>
-              <h2 className="text-3xl font-black text-gray-900 tracking-tight">
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight leading-none mb-2">
                 {patient.firstName} {patient.lastName}
               </h2>
-              <div className="flex items-center space-x-2 text-sm font-bold text-gray-500 mt-1">
-                <span>{patient.gender}</span>
-                <span className="w-1 h-1 rounded-full bg-gray-300"></span>
-                <span>{patient.age} Years</span>
-                <span className="w-1 h-1 rounded-full bg-gray-300"></span>
-                <span className="text-medical-600 font-black tracking-widest uppercase text-[10px]">
-                  Blood {patient.bloodType || "N/A"}
-                </span>
+              <div className="flex items-center space-x-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                <span className="badge-premium bg-slate-100 border-slate-200 text-slate-600">{patient.gender}</span>
+                <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                <span>{patient.age} years</span>
+                <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                <span className="text-indigo-600">Rh {patient.bloodType || "N/A"}</span>
               </div>
             </div>
           </div>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => setIsVitalsModalOpen(true)}
-            className="btn-primary flex items-center space-x-2 h-12"
+            className="btn-primary-gradient px-5 h-10"
           >
-            <Stethoscope className="w-5 h-5" />
-            <span>Examine</span>
+            <Stethoscope className="w-4 h-4 mr-2" />
+            <span>Examine Patient</span>
           </button>
           <button
             onClick={() => window.print()}
-            className="btn-secondary h-12 px-6 flex items-center space-x-2"
+            className="btn-secondary-glass px-4 h-10"
           >
-            <Clipboard className="w-5 h-5 text-gray-400" />
-            <span>Summary</span>
+            <Clipboard className="w-4 h-4 text-slate-400 mr-2" />
+            <span>Generate Report</span>
           </button>
         </div>
       </div>
 
       {workflowMessage ? (
-        <div className="card border border-medical-100 bg-medical-50 text-medical-900 flex items-center justify-between gap-4">
-          <p className="font-medium">{workflowMessage}</p>
+        <div className="bg-indigo-600 text-white flex items-center justify-between gap-4 py-3 px-5 rounded-xl shadow-lg shadow-indigo-600/10 animate-fade-in">
+          <div className="flex items-center gap-3">
+            <ShieldCheck className="w-5 h-5 text-indigo-200" />
+            <p className="text-sm font-medium">{workflowMessage}</p>
+          </div>
           <button
             onClick={() => setWorkflowMessage(null)}
-            className="text-xs font-black uppercase tracking-widest text-medical-600"
+            className="text-[10px] font-bold uppercase tracking-widest text-indigo-200 hover:text-white transition-colors"
           >
             Dismiss
           </button>
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          icon={<Thermometer className="w-5 h-5 text-red-500" />}
+          icon={<Thermometer className="w-4 h-4 text-slate-500" />}
           label="Temperature"
-          value={latestVital?.temperature ? `${latestVital.temperature} deg C` : "--"}
+          value={latestVital?.temperature ? `${latestVital.temperature}°C` : "--"}
           status={
             latestVital?.temperature && latestVital.temperature >= feverThreshold
               ? "critical"
@@ -308,8 +294,8 @@ export default function PatientDetailPage({ patientId, onBack }: PatientDetailPa
           }
         />
         <StatCard
-          icon={<Heart className="w-5 h-5 text-rose-500" />}
-          label="Pulse"
+          icon={<Heart className="w-4 h-4 text-slate-500" />}
+          label="Pulse Rate"
           value={latestVital?.pulse ? `${latestVital.pulse} bpm` : "--"}
           status={
             latestVital?.pulse &&
@@ -319,7 +305,7 @@ export default function PatientDetailPage({ patientId, onBack }: PatientDetailPa
           }
         />
         <StatCard
-          icon={<Activity className="w-5 h-5 text-blue-500" />}
+          icon={<Activity className="w-4 h-4 text-slate-500" />}
           label="Blood Pressure"
           value={
             latestVital?.bloodPressureSystolic
@@ -334,8 +320,8 @@ export default function PatientDetailPage({ patientId, onBack }: PatientDetailPa
           }
         />
         <StatCard
-          icon={<Droplets className="w-5 h-5 text-cyan-500" />}
-          label="SpO2"
+          icon={<Droplets className="w-4 h-4 text-slate-500" />}
+          label="Oxygen Saturation"
           value={latestVital?.oxygenSaturation ? `${latestVital.oxygenSaturation}%` : "--"}
           status={
             latestVital?.oxygenSaturation &&
@@ -346,59 +332,62 @@ export default function PatientDetailPage({ patientId, onBack }: PatientDetailPa
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
-          <VitalsChart data={patient.vitals || []} type="bp" title="Blood Pressure Analytics" />
-          <VitalsChart data={patient.vitals || []} type="pulse" title="Heart Rate Analytics" />
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+             <VitalsChart data={patient.vitals || []} type="bp" title="Blood Pressure Monitoring" />
+          </div>
+          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+             <VitalsChart data={patient.vitals || []} type="pulse" title="Heart Rate Trending" />
+          </div>
         </div>
 
-        <div className="space-y-8">
-          <div className="card space-y-6">
-            <div className="flex items-center space-x-3 text-medical-700">
-              <History className="w-6 h-6" />
-              <h3 className="text-lg font-black uppercase tracking-widest text-gray-800">
-                Clinical Data
-              </h3>
+        <div className="space-y-6">
+          {/* History Panel */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4 shadow-sm">
+            <div className="flex items-center gap-2 text-slate-900 border-b border-slate-50 pb-3">
+              <History className="w-4 h-4 text-slate-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider">Clinical History</h3>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="label-text">Presenting Complaint</label>
-                <p className="text-gray-900 font-medium leading-relaxed">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Presenting Complaint</p>
+                <p className="text-sm font-medium text-slate-700 leading-relaxed">
                   {patient.presentingComplaint || "No data recorded"}
                 </p>
               </div>
               <div>
-                <label className="label-text">Medical History</label>
-                <p className="text-sm text-gray-600 leading-relaxed italic">
-                  {patient.pastMedicalHistory?.join(", ") || "No history found"}
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Medical Context</p>
+                <p className="text-sm text-slate-600 leading-relaxed font-medium">
+                  {patient.pastMedicalHistory?.join(", ") || "No significant history found"}
                 </p>
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-2 pt-2">
                 {(patient.allergies || []).map((allergy: string) => (
-                  <span key={allergy} className="badge-error">
-                    Allergy: {allergy}
+                  <span key={allergy} className="badge-premium badge-error">
+                    {allergy}
                   </span>
                 ))}
               </div>
             </div>
           </div>
 
-          <div className="card space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3 text-medical-700">
-                <Pill className="w-6 h-6" />
-                <h3 className="text-lg font-black uppercase tracking-widest text-gray-800">
-                  Treatments
-                </h3>
+          {/* Medications Panel */}
+          <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-4 shadow-sm">
+            <div className="flex items-center justify-between border-b border-slate-50 pb-3">
+              <div className="flex items-center gap-2 text-slate-900">
+                <Pill className="w-4 h-4 text-slate-400" />
+                <h3 className="text-xs font-bold uppercase tracking-wider">Active Medications</h3>
               </div>
               <button
-                onClick={() => setIsTreatmentModalOpen(true)}
-                className="p-2 hover:bg-medical-50 rounded-lg text-medical-600"
+                onClick={handleOpenBlankTreatmentForm}
+                className="p-1.5 hover:bg-slate-50 rounded-lg text-slate-400 transition-colors border border-transparent hover:border-slate-200"
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="w-4 h-4" />
               </button>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-2">
               {(patient.treatments || []).filter(
                 (treatment: { status: string }) => treatment.status === "Active"
               ).length > 0 ? (
@@ -407,22 +396,22 @@ export default function PatientDetailPage({ patientId, onBack }: PatientDetailPa
                   .map((treatment: any) => (
                     <div
                       key={treatment.id}
-                      className="p-4 bg-gray-50 rounded-2xl border border-gray-100 group hover:border-medical-200 transition-colors"
+                      className="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl border border-slate-100 flex items-center justify-between transition-colors group cursor-pointer"
                     >
-                      <p className="font-bold text-gray-900">
-                        {treatment.medicine?.name || "Unknown Medicine"}
-                      </p>
-                      <p className="text-[10px] font-black text-medical-600 uppercase tracking-widest mt-1">
-                        {treatment.dosage} • {treatment.frequency}
-                      </p>
-                      {treatment.instructions ? (
-                        <p className="text-xs text-gray-500 mt-2">{treatment.instructions}</p>
-                      ) : null}
+                      <div>
+                        <p className="font-bold text-slate-800 text-xs">
+                          {treatment.medicine?.name || "Unknown"}
+                        </p>
+                        <p className="text-[10px] font-bold text-indigo-600 mt-1 uppercase tracking-tight">
+                          {treatment.dosage} • {treatment.frequency}
+                        </p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
                     </div>
                   ))
               ) : (
-                <div className="text-center py-6 opacity-30 italic text-sm">
-                  No active medications
+                <div className="text-center py-6 opacity-40 italic text-xs font-medium">
+                  No active pharmaceutical orders
                 </div>
               )}
             </div>
@@ -430,60 +419,51 @@ export default function PatientDetailPage({ patientId, onBack }: PatientDetailPa
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="card">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-3 text-medical-700">
-              <Clipboard className="w-6 h-6" />
-              <h3 className="text-lg font-black uppercase tracking-widest text-gray-800">
-                Investigations
-              </h3>
+      {/* Investigation & DDx Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Investigations */}
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-5 border-b border-slate-50 pb-3">
+            <div className="flex items-center gap-2 text-slate-900">
+              <Clipboard className="w-4 h-4 text-slate-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider">Clinical Investigations</h3>
             </div>
             <button
               onClick={() => setIsInvestigationModalOpen(true)}
-              className="btn-secondary h-10 px-4 text-xs"
+              className="btn-secondary-glass px-4 py-1.5 text-[11px]"
             >
-              Order New
+              Order Tests
             </button>
           </div>
-          <div className="overflow-hidden rounded-xl border border-gray-100">
+          <div className="overflow-hidden">
             <table className="w-full text-left text-sm">
               <thead>
-                <tr className="bg-medical-50/50 text-[10px] font-black uppercase tracking-widest text-medical-600 border-b border-gray-100">
-                  <th className="px-5 py-4">Test Name</th>
-                  <th className="px-5 py-4">Status</th>
-                  <th className="px-5 py-4 text-right">Requested</th>
+                <tr className="text-[10px] font-bold uppercase tracking-widest text-slate-400 border-b border-slate-50">
+                  <th className="px-3 py-2.5">Diagnostic Test</th>
+                  <th className="px-3 py-2.5">Status</th>
+                  <th className="px-3 py-2.5 text-right">Requested</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-slate-50">
                 {(patient.investigations || []).map((investigation: any) => (
-                  <tr key={investigation.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-5 py-4">
-                      <p className="font-bold text-gray-900">{investigation.name}</p>
-                      {investigation.notes ? (
-                        <p className="text-xs text-gray-500 mt-1">{investigation.notes}</p>
-                      ) : null}
+                  <tr key={investigation.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-3 py-3">
+                      <p className="font-semibold text-slate-800">{investigation.name}</p>
                     </td>
-                    <td className="px-5 py-4">
-                      <span
-                        className={`badge ${
-                          investigation.status === "Completed"
-                            ? "badge-success"
-                            : "badge-warning"
-                        }`}
-                      >
+                    <td className="px-3 py-3">
+                      <span className={investigation.status === "Completed" ? "badge-premium badge-success" : "badge-premium badge-warning"}>
                         {investigation.status}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-gray-400 font-medium text-right text-xs">
+                    <td className="px-3 py-3 text-slate-400 font-medium text-right text-xs">
                       {new Date(investigation.requestedAt).toLocaleDateString()}
                     </td>
                   </tr>
                 ))}
                 {(!patient.investigations || patient.investigations.length === 0) && (
                   <tr>
-                    <td colSpan={3} className="px-5 py-12 text-center opacity-40 font-medium text-sm">
-                      No clinical investigations ordered yet.
+                    <td colSpan={3} className="px-3 py-10 text-center opacity-40 font-medium text-xs">
+                      No investigation history found
                     </td>
                   </tr>
                 )}
@@ -492,71 +472,76 @@ export default function PatientDetailPage({ patientId, onBack }: PatientDetailPa
           </div>
         </div>
 
-        <div className="card space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3 text-medical-700">
-              <Brain className="w-6 h-6" />
-              <h3 className="text-lg font-black uppercase tracking-widest text-gray-800">
-                Differential Diagnoses
-              </h3>
+        {/* DDx Panel */}
+        <div className="bg-white border border-slate-200 rounded-xl p-5 space-y-5 shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-50 pb-3">
+            <div className="flex items-center gap-2 text-slate-900">
+              <Brain className="w-4 h-4 text-slate-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider">Differential Diagnosis</h3>
             </div>
             <button
               onClick={() => setIsDDxModalOpen(true)}
-              className="btn-secondary h-10 px-4 text-xs font-black"
+              className="btn-secondary-glass px-4 py-1.5 text-[11px]"
             >
-              Re-evaluate
+              Update Engine
             </button>
           </div>
 
           {(patient.differentialDiagnoses || []).length ? (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {(patient.differentialDiagnoses || []).map((diagnosis: any) => (
                 <button
                   key={diagnosis.id}
                   onClick={() => setSelectedDiagnosisName(diagnosis.diagnosis)}
-                  className={`w-full text-left flex items-center justify-between p-4 rounded-2xl border transition-colors ${
+                  className={`text-left p-3.5 rounded-xl border transition-all relative overflow-hidden group ${
                     activeDiagnosisName === diagnosis.diagnosis
-                      ? "bg-medical-50 border-medical-200"
-                      : "bg-gray-50 border-gray-100 hover:border-medical-200"
+                      ? "bg-slate-900 border-slate-900 text-white shadow-lg shadow-slate-900/10"
+                      : "bg-slate-50 border-slate-100 hover:border-slate-200 hover:bg-white"
                   }`}
                 >
-                  <div className="flex-1 min-w-0 pr-4">
-                    <p className="font-bold text-gray-900 truncate">{diagnosis.diagnosis}</p>
-                    <p className="text-[10px] font-medium text-gray-400 uppercase tracking-widest mt-1">
-                      Logic: {diagnosis.reasoning?.slice(0, 80)}...
+                  <div className="flex justify-between items-start mb-2.5 relative z-10">
+                    <p className={`font-bold truncate text-xs ${activeDiagnosisName === diagnosis.diagnosis ? "text-white" : "text-slate-800"}`}>
+                      {diagnosis.diagnosis}
                     </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-lg font-black text-medical-600 leading-none">
+                    <p className={`text-[11px] font-bold ${activeDiagnosisName === diagnosis.diagnosis ? "text-indigo-400" : "text-indigo-600"}`}>
                       {diagnosis.probability}%
                     </p>
-                    <p className="text-[8px] font-black text-gray-400 uppercase tracking-tighter mt-1">
-                      Confidence
-                    </p>
+                  </div>
+                  <div className={`h-1.5 w-full rounded-full relative z-10 ${activeDiagnosisName === diagnosis.diagnosis ? "bg-white/10" : "bg-slate-200"}`}>
+                    <div 
+                      className={`h-full rounded-full transition-all duration-500 ${activeDiagnosisName === diagnosis.diagnosis ? "bg-indigo-400" : "bg-indigo-600"}`} 
+                      style={{ width: `${diagnosis.probability}%` }}
+                    ></div>
                   </div>
                 </button>
               ))}
             </div>
           ) : (
-            <div className="text-center py-12">
-              <button onClick={() => setIsDDxModalOpen(true)} className="btn-primary px-8">
-                Generate AI DDx Suggestions
+            <div className="text-center py-12 flex flex-col items-center">
+              <Brain className="w-12 h-12 text-slate-200 mb-4" />
+              <button onClick={() => setIsDDxModalOpen(true)} className="btn-primary-gradient px-6 py-2.5">
+                Initialize DDx Analysis
               </button>
             </div>
           )}
         </div>
       </div>
 
+      {/* Playbook Section */}
       {selectedDisease ? (
-        <div className="card space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-medical-600">
-                Diagnosis Playbook
-              </p>
-              <h3 className="text-2xl font-black tracking-tight text-gray-900 mt-1">
-                {selectedDisease.name}
-              </h3>
+        <div className="bg-white border-2 border-indigo-100 rounded-2xl p-8 space-y-6 shadow-xl shadow-indigo-100/20 animate-fade-in relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-indigo-600"></div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-b border-slate-50 pb-6">
+            <div className="flex items-center gap-4">
+               <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 border border-indigo-100">
+                  <BookOpen className="w-6 h-6" />
+               </div>
+               <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-600 mb-1">Standardized Clinical Playbook</p>
+                <h3 className="text-2xl font-bold tracking-tight text-slate-900">
+                  {selectedDisease.name}
+                </h3>
+              </div>
             </div>
             <button
               onClick={handleOrderRecommendedWorkup}
@@ -564,9 +549,9 @@ export default function PatientDetailPage({ patientId, onBack }: PatientDetailPa
                 !selectedDisease.clinicalPlaybook?.investigationPlan?.length ||
                 orderInvestigationMutation.isPending
               }
-              className="btn-primary"
+              className="btn-primary-gradient px-8 py-3"
             >
-              Apply Recommended Workup
+              Order Full Protocol
             </button>
           </div>
 
@@ -574,85 +559,58 @@ export default function PatientDetailPage({ patientId, onBack }: PatientDetailPa
             disease={selectedDisease}
             existingInvestigationNames={existingInvestigationNames}
             existingTreatmentMedicineIds={existingTreatmentMedicineIds}
+            existingTreatmentNames={existingTreatmentNames}
             onOrderInvestigation={handleOrderInvestigation}
             onStartTreatment={handleStartTreatment}
             isOrderingInvestigation={orderInvestigationMutation.isPending}
-            isStartingTreatment={startTreatmentMutation.isPending}
             showReference={showReferenceDetails}
           />
         </div>
       ) : null}
 
-      <Modal
-        isOpen={isDDxModalOpen}
-        onClose={() => setIsDDxModalOpen(false)}
-        title="Clinical DDx Engine"
-      >
-        <DDxGenerator patientId={patientId} onClose={() => setIsDDxModalOpen(false)} />
+      {/* Modals */}
+      <Modal isOpen={isDDxModalOpen} onClose={() => setIsDDxModalOpen(false)} title="Diagnostic Decision Support">
+        <DDxGenerator patientId={patientId} patient={patient} onClose={() => setIsDDxModalOpen(false)} />
       </Modal>
-      <Modal
-        isOpen={isInvestigationModalOpen}
-        onClose={() => setIsInvestigationModalOpen(false)}
-        title="Order Investigation"
-      >
-        <InvestigationForm
+      <Modal isOpen={isInvestigationModalOpen} onClose={() => setIsInvestigationModalOpen(false)} title="Clinical Order Entry">
+        <InvestigationForm patientId={patientId} onClose={() => setIsInvestigationModalOpen(false)} />
+      </Modal>
+      <Modal isOpen={isTreatmentModalOpen} onClose={handleCloseTreatmentModal} title="Pharma Order Entry">
+        <TreatmentForm
           patientId={patientId}
-          onClose={() => setIsInvestigationModalOpen(false)}
+          initialRecommendation={pendingTreatmentRecommendation}
+          onClose={handleCloseTreatmentModal}
+          onSaved={(treatment) => setWorkflowMessage(`Pharmaceutical order for ${treatment?.medicine?.name || "medicine"} verified and started.`)}
         />
       </Modal>
-      <Modal
-        isOpen={isTreatmentModalOpen}
-        onClose={() => setIsTreatmentModalOpen(false)}
-        title="Prescribe Medication"
-      >
-        <TreatmentForm patientId={patientId} onClose={() => setIsTreatmentModalOpen(false)} />
-      </Modal>
-      <Modal
-        isOpen={isVitalsModalOpen}
-        onClose={() => setIsVitalsModalOpen(false)}
-        title="Record Vitals"
-      >
+      <Modal isOpen={isVitalsModalOpen} onClose={() => setIsVitalsModalOpen(false)} title="Clinical Physical Examination">
         <VitalsForm patientId={patientId} onClose={() => setIsVitalsModalOpen(false)} />
       </Modal>
     </div>
   );
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-  status,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  status: "normal" | "warning" | "critical";
-}) {
+function StatCard({ icon, label, value, status }: { icon: React.ReactNode; label: string; value: string; status: "normal" | "warning" | "critical"; }) {
   const statusClasses = {
-    normal: "bg-white border-gray-100",
-    warning: "bg-amber-50 border-amber-200 ring-4 ring-amber-100/50",
-    critical: "bg-rose-50 border-rose-200 ring-4 ring-rose-100/50",
+    normal: "bg-white border-slate-200",
+    warning: "bg-amber-50/50 border-amber-200 ring-4 ring-amber-100/10",
+    critical: "bg-rose-50/50 border-rose-200 ring-4 ring-rose-100/10",
+  };
+
+  const textClasses = {
+    normal: "text-slate-900",
+    warning: "text-amber-700",
+    critical: "text-rose-700",
   };
 
   return (
-    <div
-      className={`card flex items-center space-x-5 p-5 border transition-all duration-300 ${statusClasses[status]}`}
-    >
-      <div className="p-3.5 bg-white rounded-2xl shadow-sm border border-gray-50 text-medical-600">
+    <div className={`flex items-center space-x-4 p-4 border rounded-2xl transition-all duration-300 ${statusClasses[status]} shadow-sm hover:shadow-md`}>
+      <div className={`w-10 h-10 rounded-xl bg-white shadow-sm border border-slate-100 flex items-center justify-center flex-shrink-0 ${status !== "normal" && "animate-pulse"}`}>
         {icon}
       </div>
-      <div>
-        <p className="label-text mb-0.5">{label}</p>
-        <p
-          className={`text-2xl font-black ${
-            status === "critical"
-              ? "text-rose-700"
-              : status === "warning"
-                ? "text-amber-700"
-                : "text-gray-900"
-          }`}
-        >
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 truncate">{label}</p>
+        <p className={`text-lg font-bold truncate tracking-tight ${textClasses[status]}`}>
           {value}
         </p>
       </div>

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { prisma } from "../../index";
+import { prisma } from "../../lib/prisma.js";
 import { authMiddleware, AuthRequest } from "../../middleware/auth";
 import { handleError, NotFoundError } from "../../lib/errors";
 import {
@@ -12,6 +12,71 @@ import { enrichDiseaseRecord } from "../../lib/disease-playbook";
 const router = Router();
 router.use(authMiddleware);
 
+function uniqueValues(values: Array<string | null | undefined>, limit?: number): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const value of values) {
+    if (typeof value !== "string") {
+      continue;
+    }
+
+    const trimmed = value.trim();
+    const normalized = trimmed.toLowerCase();
+    if (!normalized || seen.has(normalized)) {
+      continue;
+    }
+
+    seen.add(normalized);
+    result.push(trimmed);
+
+    if (limit && result.length >= limit) {
+      break;
+    }
+  }
+
+  return result;
+}
+
+function normalizeList(value: unknown, limit?: number): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return uniqueValues(
+    value.map((item) => (typeof item === "string" ? item : undefined)),
+    limit
+  );
+}
+
+function splitClinicalText(value?: string | null, limit?: number): string[] {
+  return uniqueValues((value || "").split(/[\n,.;]+/), limit);
+}
+
+function normalizeLatestVital(vital?: {
+  temperature: number | null;
+  pulse: number | null;
+  respiratoryRate: number | null;
+  bloodPressureSystolic: number | null;
+  bloodPressureDiastolic: number | null;
+  oxygenSaturation: number | null;
+  bloodGlucose: number | null;
+} | null): DDxRequest["latestVital"] {
+  if (!vital) {
+    return null;
+  }
+
+  return {
+    temperature: vital.temperature ?? undefined,
+    pulse: vital.pulse ?? undefined,
+    respiratoryRate: vital.respiratoryRate ?? undefined,
+    bloodPressureSystolic: vital.bloodPressureSystolic ?? undefined,
+    bloodPressureDiastolic: vital.bloodPressureDiastolic ?? undefined,
+    oxygenSaturation: vital.oxygenSaturation ?? undefined,
+    bloodGlucose: vital.bloodGlucose ?? undefined,
+  };
+}
+
 // Generate DDx for a patient
 router.post("/generate/:patientId", async (req: AuthRequest, res: Response) => {
   try {
@@ -20,25 +85,70 @@ router.post("/generate/:patientId", async (req: AuthRequest, res: Response) => {
     // Get patient
     const patient = await prisma.patient.findUnique({
       where: { id: req.params.patientId },
+      include: {
+        investigations: {
+          orderBy: { requestedAt: "desc" },
+          take: 10,
+        },
+        clinicalNotes: {
+          orderBy: { createdAt: "desc" },
+          take: 10,
+        },
+        vitals: {
+          orderBy: { recordedAt: "desc" },
+          take: 1,
+        },
+      },
     });
 
     if (!patient || patient.userId !== req.user.userId) {
       throw new NotFoundError("Patient");
     }
 
-    const { symptoms = [], signs = [], riskFactors = [] } = req.body;
-    const latestVital = await prisma.vital.findFirst({
-      where: { patientId: req.params.patientId },
-      orderBy: { recordedAt: "desc" },
-    });
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const chartSymptoms = splitClinicalText(patient.presentingComplaint, 12);
+    const chartSigns = splitClinicalText(patient.examFindings, 12);
+    const chartRiskFactors = uniqueValues(patient.pastMedicalHistory || [], 12);
+    const clinicalNarrative = uniqueValues(
+      [
+        ...splitClinicalText(patient.durationOfIllness, 4),
+        ...splitClinicalText(patient.systemicReview, 8),
+        ...splitClinicalText(patient.examFindings, 8),
+        ...splitClinicalText(patient.vitals[0]?.notes, 4),
+        ...patient.clinicalNotes.flatMap((note) => [
+          note.title,
+          ...splitClinicalText(note.content, 4),
+          ...(note.tags || []),
+        ]),
+      ],
+      16
+    );
+    const investigationFindings = uniqueValues(
+      patient.investigations.flatMap((investigation) => [
+        investigation.name,
+        investigation.notes,
+        investigation.status === "Completed" ? investigation.result : undefined,
+        investigation.interpretation,
+      ]),
+      16
+    );
+    const latestVital = normalizeLatestVital(patient.vitals[0]);
 
     const request: DDxRequest = {
-      symptoms,
-      signs,
+      symptoms: Object.prototype.hasOwnProperty.call(body, "symptoms")
+        ? normalizeList((body as { symptoms?: unknown }).symptoms, 12)
+        : chartSymptoms,
+      signs: Object.prototype.hasOwnProperty.call(body, "signs")
+        ? normalizeList((body as { signs?: unknown }).signs, 12)
+        : chartSigns,
       age: patient.age,
       specialty: req.user.specialty || "General Medicine",
-      riskFactors,
+      riskFactors: Object.prototype.hasOwnProperty.call(body, "riskFactors")
+        ? normalizeList((body as { riskFactors?: unknown }).riskFactors, 12)
+        : chartRiskFactors,
       latestVital,
+      clinicalNarrative,
+      investigationFindings,
     };
 
     // Generate suggestions
