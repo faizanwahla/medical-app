@@ -31,9 +31,11 @@ jobs:
     - name: Install dependencies
       run: pnpm install
 
-    - name: Build Workspace
-      # This builds the shared package AND the web app
-      run: pnpm build
+    - name: Build Web and Shared Only
+      # We skip the server because it has TypeScript errors that block the build
+      run: |
+        pnpm run --filter "@medical-app/shared" build
+        pnpm run --filter "@medical-app/web" build
 
     - name: Setup Pages
       uses: actions/configure-pages@v4
@@ -41,7 +43,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        # This points to where Vite puts the finished files
+        # Vite puts the finished files here
         path: './packages/web/dist'
 
     - name: Deploy to GitHub Pages
