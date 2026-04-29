@@ -4,6 +4,7 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: '/medical-app/',
   plugins: [react()],
   resolve: {
     extensions: [".mjs", ".ts", ".tsx", ".js", ".jsx", ".json"],
