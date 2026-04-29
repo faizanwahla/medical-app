@@ -4,7 +4,8 @@
   "description": "Comprehensive Medical Patient Management System",
   "private": true,
   "scripts": {
-    "dev": "pnpm -r run dev",
+    "setup:network": "node setup-network.js",
+    "dev": "pnpm run setup:network && pnpm -r run dev",
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
     "lint": "pnpm -r run lint",

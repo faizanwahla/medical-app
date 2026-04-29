@@ -4,6 +4,7 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import dotenv from "dotenv";
 import { PrismaClient } from "@prisma/client";
+import os from "os";
 
 // Import routes
 import authRoutes from "./modules/auth/routes.js";
@@ -25,8 +26,29 @@ export { prisma } from "./lib/prisma.js";
 
 // Create Express app
 const app = express();
-const DEFAULT_CORS_ORIGINS = ["http://localhost:3000", "http://localhost:3001"];
-const LOCAL_DEV_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
+function getLocalIP() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return '127.0.0.1';
+}
+
+const LOCAL_IP = getLocalIP();
+const DEFAULT_CORS_ORIGINS = [
+  "http://localhost:3000",
+  "http://localhost:3001",
+  "http://127.0.0.1:3000",
+  "http://127.0.0.1:3001",
+  `http://${LOCAL_IP}:3000`,
+  `http://${LOCAL_IP}:3001`,
+];
+const LOCAL_DEV_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?$/;
 
 // Middleware
 // Security headers
@@ -135,7 +157,7 @@ export const startServer = (port = Number(PORT)) => {
     return server;
   }
 
-  server = app.listen(port, () => {
+  server = app.listen(port, "0.0.0.0", () => {
     console.log(`Medical App Server running on port ${port}`);
   });
 
