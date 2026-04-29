@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BookOpen, Search, Filter, ChevronRight, Book } from "lucide-react";
+import { BookOpen, Search, Filter, Book } from "lucide-react";
 import { Disease, SPECIALTIES } from "@medical-app/shared";
 import DiseasePlaybookPanel from "../../components/DiseasePlaybookPanel";
 import apiClient from "../../lib/api";

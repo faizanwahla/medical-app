@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuthStore } from "../lib/store";
 import Sidebar from "../components/ClinicalSidebar";
 import { Breadcrumb } from "../components/Breadcrumb";
-import { Search, Bell, User } from "lucide-react";
+import { Search, Bell, User, Menu, X } from "lucide-react";
 
 // Direct imports to prevent lazy-loading issues
 import PatientListPage from "../pages/dashboard/ClinicalDirectory";
@@ -21,6 +21,7 @@ type DashboardPage = "patients" | "patient-detail" | "reports" | "settings" | "a
 export default function DashboardLayout({ onLogout }: DashboardLayoutProps) {
   const [currentPage, setCurrentPage] = useState<DashboardPage>("patients");
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, logout } = useAuthStore();
 
   const handleLogout = () => {
@@ -30,6 +31,7 @@ export default function DashboardLayout({ onLogout }: DashboardLayoutProps) {
 
   const handleNavigate = (page: string) => {
     setCurrentPage(page as DashboardPage);
+    setMobileMenuOpen(false);
     if (page !== "patient-detail") {
       setSelectedPatientId(null);
     }
@@ -80,17 +82,70 @@ export default function DashboardLayout({ onLogout }: DashboardLayoutProps) {
     "library": "Clinical Library"
   };
 
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [mobileMenuOpen]);
+
   return (
     <div className="flex h-screen bg-[#f8fafc] overflow-hidden">
-      <Sidebar
-        currentPage={currentPage}
-        onNavigate={handleNavigate}
-        onLogout={handleLogout}
-      />
+      <div className="hidden md:block">
+        <Sidebar
+          currentPage={currentPage}
+          onNavigate={handleNavigate}
+          onLogout={handleLogout}
+        />
+      </div>
+
+      {mobileMenuOpen && (
+        <>
+          <button
+            type="button"
+            aria-label="Close navigation menu"
+            onClick={() => setMobileMenuOpen(false)}
+            className="fixed inset-0 z-30 bg-slate-950/50 md:hidden"
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Primary navigation"
+            className="fixed left-0 top-0 z-40 md:hidden"
+          >
+            <Sidebar
+              currentPage={currentPage}
+              onNavigate={handleNavigate}
+              onLogout={handleLogout}
+              isMobile
+              onCloseMobile={() => setMobileMenuOpen(false)}
+            />
+          </div>
+        </>
+      )}
 
       <div className="flex-1 flex flex-col min-w-0 relative">
-        <header className="h-14 bg-white/70 backdrop-blur-md border-b border-slate-200/60 px-6 flex items-center justify-between sticky top-0 z-20">
-          <div className="flex items-center gap-4">
+        <header className="h-14 bg-white/70 backdrop-blur-md border-b border-slate-200/60 px-3 sm:px-4 lg:px-6 flex items-center justify-between sticky top-0 z-20">
+          <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((v) => !v)}
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+              className="md:hidden inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+            >
+              {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+            </button>
             <Breadcrumb
               items={[
                 { label: "Dashboard", onClick: () => handleNavigate("patients") },
@@ -102,7 +157,7 @@ export default function DashboardLayout({ onLogout }: DashboardLayoutProps) {
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <div className="hidden lg:flex items-center bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 focus-within:ring-2 focus-within:ring-sky-500/20 transition-all">
               <Search className="w-3.5 h-3.5 text-slate-400 mr-2" />
               <input type="text" placeholder="Jump to..." className="bg-transparent border-0 focus:ring-0 text-xs w-32 placeholder:text-slate-400" />
@@ -113,7 +168,7 @@ export default function DashboardLayout({ onLogout }: DashboardLayoutProps) {
               <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-rose-500 rounded-full border border-white"></span>
             </button>
 
-            <div className="h-6 w-[1px] bg-slate-200"></div>
+            <div className="h-6 w-[1px] bg-slate-200 hidden sm:block"></div>
 
             <div className="flex items-center gap-2.5">
               <div className="text-right hidden sm:block">
@@ -127,7 +182,7 @@ export default function DashboardLayout({ onLogout }: DashboardLayoutProps) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-5 bg-[#f8fafc]">
+        <main className="flex-1 overflow-auto p-3 sm:p-4 lg:p-5 bg-[#f8fafc]">
           <div className="max-w-[1600px] mx-auto animate-fade-in">
             {renderContent()}
           </div>

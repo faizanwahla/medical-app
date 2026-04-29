@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import apiClient from "../lib/api";
-import { Search, Plus, Loader2, AlertCircle, Pill, ClipboardPen } from "lucide-react";
+import { Search, Plus, AlertCircle, Pill, ClipboardPen } from "lucide-react";
 import {
   DiseaseTreatmentRecommendation,
   Medicine,
@@ -36,9 +36,6 @@ export default function TreatmentForm({
     initialRecommendation?.medicineName || ""
   );
   const [medicineType, setMedicineType] = useState("");
-  const [referenceDosage, setReferenceDosage] = useState(
-    initialRecommendation?.dose || ""
-  );
   const [dosage, setDosage] = useState(initialRecommendation?.dose || "");
   const [frequency, setFrequency] = useState(initialRecommendation?.frequency || "");
   const [duration, setDuration] = useState(initialRecommendation?.duration || "");
@@ -77,7 +74,6 @@ export default function TreatmentForm({
     setSelectedMedicineId(medicine.id);
     setMedicineName(medicine.name);
     setMedicineType(medicine.type);
-    setReferenceDosage(medicine.dosage);
     setDosage(medicine.dosage);
     setSearchTerm(medicine.name);
   };
@@ -86,7 +82,6 @@ export default function TreatmentForm({
     setSelectedMedicineId("");
     setMedicineName("");
     setMedicineType("");
-    setReferenceDosage("");
     setSearchTerm("");
   };
 
@@ -156,7 +151,6 @@ export default function TreatmentForm({
                       setSelectedMedicineId("");
                       setMedicineName("");
                       setMedicineType("");
-                      setReferenceDosage("");
                     }}
                   />
                 </div>
