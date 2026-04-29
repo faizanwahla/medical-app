@@ -13,7 +13,6 @@ import {
   Stethoscope,
   Syringe,
   Info,
-  ChevronRight,
   ShieldCheck,
   CheckCircle2,
   AlertCircle

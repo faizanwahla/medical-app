@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "../lib/api";
-import { Plus, Loader2, AlertCircle, Thermometer, Activity, Droplets, Heart } from "lucide-react";
+import { Plus, AlertCircle, Thermometer, Activity, Droplets, Heart } from "lucide-react";
 
 interface VitalsFormProps {
   patientId: string;
