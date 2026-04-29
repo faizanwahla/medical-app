@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuthStore } from "../lib/store";
 import Sidebar from "../components/ClinicalSidebar";
+import { Breadcrumb } from "../components/Breadcrumb";
 import { Search, Bell, User } from "lucide-react";
 
 // Direct imports to prevent lazy-loading issues
@@ -90,9 +91,12 @@ export default function DashboardLayout({ onLogout }: DashboardLayoutProps) {
       <div className="flex-1 flex flex-col min-w-0 relative">
         <header className="h-14 bg-white/70 backdrop-blur-md border-b border-slate-200/60 px-6 flex items-center justify-between sticky top-0 z-20">
           <div className="flex items-center gap-4">
-            <h1 className="text-base font-bold text-slate-900 tracking-tight">
-              {pageTitles[currentPage]}
-            </h1>
+            <Breadcrumb
+              items={[
+                { label: "Dashboard", onClick: () => handleNavigate("patients") },
+                { label: pageTitles[currentPage], isActive: true }
+              ]}
+            />
             <div className="hidden sm:flex items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
               <span className="text-sky-500">{currentPage}</span>
             </div>

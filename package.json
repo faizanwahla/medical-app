@@ -12,6 +12,7 @@
     "type-check": "pnpm -r run type-check"
   },
   "devDependencies": {
+    "shadcn-ui": "^0.9.5",
     "typescript": "^5.4.5"
   }
 }
