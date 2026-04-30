@@ -1,0 +1,42 @@
+# Documentation
+README.md
+SETUP.md
+DEVELOPMENT.md
+ACCESSIBILITY_AUDIT.md
+UI_REDESIGN_SUMMARY.md
+
+# Git
+.git
+.github
+.gitignore
+
+# IDE & Editor
+.vscode
+.idea
+.claude
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local dev
+.env.local
+.env.*.local
+.env.development
+
+# Build artifacts (only for local, Vercel will rebuild)
+# Commented out - Vercel may need these for caching
+# node_modules/
+# packages/*/dist
+# packages/*/build
+
+# Tests (run separately if needed, not during deploy)
+**/__tests__
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Source maps in production
+**/*.map

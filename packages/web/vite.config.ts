@@ -13,6 +13,21 @@ export default defineConfig({
       "@medical-app/shared": path.resolve(__dirname, "../shared/src"),
     },
   },
+  build: {
+    // Improve chunking to reduce main bundle size
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'routing': ['@tanstack/react-router'],
+          'query': ['@tanstack/react-query'],
+          'charts': ['recharts'],
+        },
+      },
+    },
+    // Suppress chunk size warning - charts library is inherently large
+    chunkSizeWarningLimit: 600,
+  },
   server: {
     host: "0.0.0.0",
     port: 3001,
