@@ -3,14 +3,14 @@
   "version": "1.0.0",
   "description": "Comprehensive Medical Patient Management System",
   "private": true,
-  "scripts": {
-    "setup:network": "node setup-network.js",
-    "dev": "pnpm run setup:network && pnpm -r run dev",
-    "build": "pnpm -r run build",
-    "test": "pnpm -r run test",
-    "lint": "pnpm -r run lint",
-    "type-check": "pnpm -r run type-check"
-  },
+"scripts": {
+  "setup:network": "node setup-network.js",
+  "dev": "pnpm run setup:network && pnpm -r run dev",
+  "build": "pnpm --filter @medical-app/shared build && pnpm --filter @medical-app/server vercel-build",
+  "test": "pnpm -r run test",
+  "lint": "pnpm -r run lint",
+  "type-check": "pnpm -r run type-check"
+},
   "devDependencies": {
     "shadcn-ui": "^0.9.5",
     "typescript": "^5.4.5"

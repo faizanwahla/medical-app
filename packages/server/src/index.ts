@@ -22,19 +22,32 @@ import signsRoutes from "./modules/signs/routes.js";
 // Load environment variables
 dotenv.config();
 
-export { prisma } from "./lib/prisma.js";
+// Import AND export so it's available locally and to other modules
+import { prisma } from "./lib/prisma.js";
+export { prisma };
 
 // Create Express app
 const app = express();
 
+/**
+ * Utility to find local IPv4 address for local network testing.
+ * Includes safety checks to prevent "Object is possibly undefined" errors.
+ */
 function getLocalIP() {
-  const interfaces = os.networkInterfaces();
-  for (const name of Object.keys(interfaces)) {
-    for (const iface of interfaces[name]) {
-      if (iface.family === 'IPv4' && !iface.internal) {
-        return iface.address;
+  try {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+      const networkInterface = interfaces[name];
+      if (!networkInterface) continue;
+
+      for (const iface of networkInterface) {
+        if (iface && iface.family === 'IPv4' && !iface.internal) {
+          return iface.address;
+        }
       }
     }
+  } catch (error) {
+    console.error("Failed to detect local IP:", error);
   }
   return '127.0.0.1';
 }
@@ -51,10 +64,9 @@ const DEFAULT_CORS_ORIGINS = [
 const LOCAL_DEV_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?$/;
 
 // Middleware
-// Security headers
 app.use(helmet());
 
-// CORS - configure allowed origins from env
+// CORS - configure allowed origins from env for Vercel/Production
 const allowedOrigins =
   process.env.CORS_ORIGIN?.split(",")
     .map((origin) => origin.trim())
@@ -71,7 +83,6 @@ app.use(
         callback(null, true);
         return;
       }
-
       callback(new Error("Origin not allowed by CORS"));
     },
     credentials: true,
@@ -83,15 +94,15 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: { success: false, error: "Too many requests, please try again later" },
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use("/api/", limiter);
 
-// Strict rate limiting for authentication endpoints (5 requests per 15 minutes)
+// Strict rate limiting for authentication
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 5,
@@ -99,18 +110,17 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
-    // Only apply to login and register endpoints
     return !req.path.includes("/login") && !req.path.includes("/register");
   },
 });
 
-// Logging middleware
+// Logging
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} ${req.method} ${req.path}`);
   next();
 });
 
-// Health check endpoint
+// Health check
 app.get("/health", (req, res) => {
   res.json({ status: "ok", timestamp: new Date() });
 });
@@ -128,7 +138,7 @@ app.use("/api/notes", notesRoutes);
 app.use("/api/symptoms", symptomsRoutes);
 app.use("/api/signs", signsRoutes);
 
-// Error handling middleware
+// Error handling
 app.use(
   (
     err: any,
@@ -157,6 +167,7 @@ export const startServer = (port = Number(PORT)) => {
     return server;
   }
 
+  // Bind to 0.0.0.0 for local network access; Vercel handles its own binding
   server = app.listen(port, "0.0.0.0", () => {
     console.log(`Medical App Server running on port ${port}`);
   });
@@ -164,14 +175,17 @@ export const startServer = (port = Number(PORT)) => {
   return server;
 };
 
-if (require.main === module) {
+// ESM replacement for require.main === module
+const isMainModule = import.meta.url === `file://${process.argv[1]}`;
+
+if (isMainModule || process.env.NODE_ENV === 'production') {
   startServer();
 }
 
 // Handle uncaught exceptions
 process.on("uncaughtException", (error) => {
   console.error("Uncaught Exception:", error);
-  process.exit(1);
+  // process.exit(1);
 });
 
 // Handle unhandled promise rejections
@@ -188,11 +202,10 @@ process.on("SIGTERM", async () => {
       await prisma.$disconnect();
       process.exit(0);
     });
-    return;
+  } else {
+    await prisma.$disconnect();
+    process.exit(0);
   }
-
-  await prisma.$disconnect();
-  process.exit(0);
 });
 
 export { app };
