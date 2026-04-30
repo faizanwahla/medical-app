@@ -4,7 +4,6 @@
     "module": "ESNext",
     "lib": ["ESNext"],
     "outDir": "./dist",
-    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -15,8 +14,9 @@
     "baseUrl": ".",
     "paths": {
       "@medical-app/shared": ["../shared/src"]
-    }
+    },
+    "rootDirs": ["src", "../shared/src"]
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "../shared/src/**/*"],
   "exclude": ["node_modules", "dist"]
 }
